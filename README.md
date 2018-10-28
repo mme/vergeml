@@ -10,7 +10,7 @@ Here's how it looks in action:
 Installation
 ============
 
-VergeML runs on Windows, Linux and MacOS. You need to have Python 3.6 and [TensorFlow installed](Installation/Installation.md). 
+VergeML runs on Windows, Linux and MacOS. You need to have Python 3.6 and [TensorFlow installed](docs/installation.md). 
 
 Get VergeML via pip: 
 
@@ -20,7 +20,7 @@ Verify your installation by typing:
 
     ml help
 
-Congratulations, you have successfully installed VergeML! If you need further help, see the full [installation guide](Installation/Installation.md).
+Congratulations, you have successfully installed VergeML! If you need further help, see the full [installation guide](docs/installation.md).
 
 Quick Start
 ===========
