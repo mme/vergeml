@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
@@ -13,7 +13,7 @@ setup(
     license="MIT",
     keywords="ai deep learning",
     url="http://github.com/vergeml/vergeml",
-    packages=['vergeml'],
+    packages=find_packages(),
     long_description=long_description,
     long_description_content_type="text/markdown",
     classifiers=[
