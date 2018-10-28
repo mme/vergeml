@@ -37,8 +37,12 @@ class KerasLibrary(Library):
         stderr = sys.stderr
         sys.stderr = open(os.devnull, "w")
         # pylint: disable=W0612
-        import keras
-        sys.stderr = stderr
+        try:
+            import keras
+        except Exception as e:
+            raise e
+        finally:
+            sys.stderr = stderr
 
         from keras import backend as K
         if K.backend() == 'tensorflow':
