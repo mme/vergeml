@@ -1,0 +1,1 @@
+VergeML is a **command line based environment** for exploring, training and running state-of-the-Art Machine Learning models. It integrates all necessary tools and services around creating your custom Machine Learning applications.
