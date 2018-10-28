@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name="vergeml",
-    version="0.1.1",
+    version="0.1.2",
     author="Markus Ecker",
     author_email="markus.ecker@gmail.com",
     description="Machine Learning Environment",
