@@ -33,7 +33,7 @@ Go to the directory where you want to create your project and type:
 
     ml --model=imagenet new cats_dogs
 
-This sets up a model called ```imagenet```, which is based on transfer learning. 
+This sets up a model based on [Keras](https://keras.io) called ```imagenet```, which is based on transfer learning. 
 
 Let's change to this project directory and have a look: 
 
