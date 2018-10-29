@@ -3,4 +3,4 @@
 
 Added
 ------------
-* Version 0.1.2 of VergeML. Have fun!
+* Version 0.1.4 (alpha) of VergeML. Have fun!
