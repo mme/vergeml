@@ -1,6 +1,7 @@
 from vergeml.utils import VergeMLError, parse_split
 from vergeml.views import ListView, BatchView, IteratorView
 from vergeml.io import Sample, SourcePlugin
+from vergeml.env import Environment
 from vergeml.operation import BaseOperation
 from vergeml.loader import FileCachedLoader, LiveLoader, MemoryCachedLoader
 from vergeml.plugins import PLUGINS
@@ -43,7 +44,7 @@ class Data:
     """
 
     def __init__(self,
-                 env: 'Environment' = None,
+                 env: Environment = None,
                  input: SourcePlugin = None,
                  output: SourcePlugin = None,
                  ops: List[BaseOperation] = [],
