@@ -62,7 +62,7 @@ class InputMnist(SourcePlugin):
 
         for path in files:
             if not os.path.exists(path):
-                raise Error("File not found in samples_dir: {}".format(
+                raise VergeMLError("File not found in samples_dir: {}".format(
                     os.path.basename(path)))
 
         if _md5(files[0]) == _MD5_FASHION:
@@ -101,7 +101,7 @@ class InputMnist(SourcePlugin):
                     n = int(len(self.data['train']) * self.config['val_perc'] // 100)
                 if n is not None:
                     if n > len(self.data['train']):
-                        raise Error("number of test samples is greater than number of available samples.")
+                        raise VergeMLError("number of test samples is greater than number of available samples.")
 
                     rng = random.Random(self.config['random_seed'])
                     count = len(self.data[split])
@@ -113,7 +113,7 @@ class InputMnist(SourcePlugin):
 
                 if self.config['test_num']:
                     if self.config['test_num'] > len(self.data['test']):
-                        raise Error("number of test samples is greater than number of available samples.")
+                        raise VergeMLError("number of test samples is greater than number of available samples.")
 
                     rng = random.Random(self.config['random_seed'])
                     indices = rng.sample(range(len(self.data[split])), len(pixels))
