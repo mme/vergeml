@@ -285,7 +285,7 @@ def load_yaml_file(filename, label='YAML file', loader=yaml.Loader):
 
     except OSError as err:
         raise VergeMLError(f"Could not open {label} {filename}: {err.strerror}",
-                            "Please ensure the file exists and you have the required access priviledges.")
+                            "Please ensure the file exists and you have the required access privileges.")
 
 
 class _YAMLAnalyzer(yaml.reader.Reader, yaml.scanner.Scanner):

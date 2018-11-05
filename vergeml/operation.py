@@ -155,7 +155,7 @@ class OperationPlugin(BaseOperation):
         raise NotImplementedError
 
     def transform_xy(self, x: Any, y: Any, rng: random.Random) -> Tuple[Any, Any]:
-        """Tranform x and y values.
+        """Transform x and y values.
 
         :param x: the sample data
         :param y: the ground truth
@@ -184,7 +184,7 @@ class OperationPlugin(BaseOperation):
 
     def transform_sample(self, sample: Sample) -> Sample:
         """Transform a sample.
-        :param sample: the sample to tranform
+        :param sample: the sample to transform
 
         :return: the transformed sample:
 

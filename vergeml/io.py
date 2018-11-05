@@ -307,7 +307,7 @@ class SourcePlugin:
         """Called when the system is done previewing samples"""
 
     def preview_filename(self, path):
-        """Generate a filename for previews, appending a number when the file aready exists.
+        """Generate a filename for previews, appending a number when the file already exists.
         """
         if not os.path.exists(path):
             return path
