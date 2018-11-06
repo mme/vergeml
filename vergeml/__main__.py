@@ -279,6 +279,7 @@ def main(argv=None, plugins=PLUGINS):
     _configure_logging()
     try:
         run(argv, plugins=plugins)
+    
     except VergeMLError as e:
         # NOTE- when the error is encountered before the environment is created, it will be empty.
         from vergeml.env import ENV
@@ -311,6 +312,13 @@ def main(argv=None, plugins=PLUGINS):
                 print("",  file=sys.stderr)
                 help_topic = "" if e.help_topic == "*help*" else " " + e.help_topic
                 print(f"See 'ml help" + help_topic + "'.", file=sys.stderr)
+
+    except Exception as e:
+        if e.__class__.__name__ == 'ResourceExhaustedError':
+            print("Error! Your GPU ran out of memory.")
+            print("Please try lowering resource usage by e.g. decreasing model parameters such as batch size.")
+        else:
+            raise e
 
 if __name__ == "__main__":
     main()
