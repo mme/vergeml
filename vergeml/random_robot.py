@@ -468,7 +468,7 @@ _PHRASES = (
 
     ("$name will make you",
      ("value life", "stick around", "find a way", "do your dishes",
-      "be sucessful", "dance", "go with the rythm", "a star",
+      "be successful", "dance", "go with the rythm", "a star",
       "listen to Pink Floyd", "breathe", "high", "ask three whys",
       "entertain yourself", "be curious", "help others", "money",
       "be financially independent", "have a passive income",
