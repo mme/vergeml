@@ -241,7 +241,7 @@ class ImageNetModel:
             # load the best weights
             self.trained_model.load_weights(os.path.join(checkpoints_dir, "last_layers.h5"))
 
-            pred_test, final_results = _evaluate_final(self.trained_model, xy_test, batch_size, history)
+            pred_test, final_results = self._evaluate_final(self.trained_model, xy_test, batch_size, history)
 
             self.model = _save(self.trained_model, self.base_model, layers, labels, random_seed, checkpoints_dir)
 
@@ -285,27 +285,39 @@ class ImageNetModel:
         return [dec[:top]]
 
 
-def _evaluate_final(model, xy_test, batch_size, history):
-    res = {}
-    pred_test = None
+    def _evaluate_final(self, model, xy_test, batch_size, history):
+        res = {}
+        pred_test = None
 
-    if 'val_acc' in history.history:
-        res['val_acc'] = max(history.history['val_acc'])
-        rev_ix = -1 - list(reversed(history.history['val_acc'])).index(res['val_acc'])
-        res['val_loss'] = history.history['val_loss'][rev_ix]
+        if 'val_acc' in history.history:
+            res['val_acc'] = max(history.history['val_acc'])
+            rev_ix = -1 - list(reversed(history.history['val_acc'])).index(res['val_acc'])
+            res['val_loss'] = history.history['val_loss'][rev_ix]
 
-    res['acc'] = history.history['acc'][-1]
-    res['loss'] = history.history['loss'][-1]
+        res['acc'] = history.history['acc'][-1]
+        res['loss'] = history.history['loss'][-1]
 
-    if len(xy_test[0]):
-        # evaluate with test data
-        x_test, y_test = xy_test
-        pred_test = model.predict(x_test, batch_size=batch_size, verbose=0)
-        test_loss, test_acc = model.evaluate(x_test, y_test, batch_size=batch_size, verbose=0)
-        res['test_loss'] = test_loss
-        res['test_acc'] = test_acc
+        if len(xy_test[0]):
+            from sklearn.metrics import classification_report
+            # evaluate with test data
+            x_test, y_test = xy_test
+            pred_test = model.predict(x_test, batch_size=batch_size, verbose=0)
+            test_loss, test_acc = model.evaluate(x_test, y_test, batch_size=batch_size, verbose=0)
+            res['test_loss'] = test_loss
+            res['test_acc'] = test_acc
 
-    return pred_test, res
+            report = classification_report(y_true = np.argmax(y_test, axis=1), 
+                                           y_pred = np.argmax(pred_test, axis=1),
+                                           target_names=self.labels, 
+                                           digits=4, 
+                                           output_dict=True)
+            for label in self.labels:
+                stats = report[label]
+                res[label+"-precision"] = stats['precision']
+                res[label+"-recall"] = stats['recall']
+                res[label+"-f1"] = stats['f1-score']
+
+        return pred_test, res
 
 
 def _makenet(x, num_layers, dropout, random_seed):
