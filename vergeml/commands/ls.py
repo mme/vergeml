@@ -11,6 +11,7 @@ import json
 import csv
 from datetime import datetime
 import yaml
+import io
 
 EXAMPLES = """
 $ ml list -sacc 
@@ -149,10 +150,15 @@ class ListCommand(CommandPlugin):
             print(json.dumps(res))
 
         elif args['output'] == 'csv':
-            writer = csv.writer(sys.stdout)
+            buffer = io.StringIO()
+
+            writer = csv.writer(buffer)
             writer.writerow(theader)
             for row in tdata:
                 writer.writerow(row)
+            val = buffer.getvalue()
+            val = val.replace('\r', '')
+            print(val.strip())
 
 def _filter(info, hyper, comp_args):
     try:
