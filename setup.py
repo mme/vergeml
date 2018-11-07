@@ -26,6 +26,7 @@ setup(
         'numpy',
         'pyyaml',
         'lz4',
+        'scikit-learn',
         # install this for the first release only - in a subsequent release dependencies should be
         # installed on demand
         'Pillow',
