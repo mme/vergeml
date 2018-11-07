@@ -5,7 +5,7 @@ html {
 }
 
 input, textarea {
-    -webkit-appearance: none;
+    -webkit-appearance: none; -moz-appearance: none;
     -webkit-border-radius: 0;
 }
 
