@@ -195,13 +195,13 @@ class ImageNetModel:
         self.trained_model = Model(input=input_layer, output=output_layer)
 
         if optimizer == 'adam':
-            self.trained_model.compile(loss='categorical_crossentropy',
-                                       optimizer=optimizers.Adam(lr=learning_rate, decay=decay),
-                                       metrics=['accuracy'])
+            optimizer = optimizers.Adam(lr=learning_rate, decay=decay)
         else:
-            self.trained_model.compile(loss="categorical_crossentropy",
-                                       optimizer=optimizers.SGD(lr=learning_rate, decay=decay, momentum=0.9),
-                                       metrics=["accuracy"])
+            optimizer = optimizers.SGD(lr=learning_rate, decay=decay, momentum=0.9)
+    
+        self.trained_model.compile(loss='categorical_crossentropy',
+                                   optimizer=optimizer,
+                                   metrics=['accuracy'])
 
         callbacks = callbacks.copy()
 
@@ -221,8 +221,6 @@ class ImageNetModel:
             callbacks.append(EarlyStopping(min_delta=early_stopping_delta, patience=early_stopping_patience))
 
         callbacks.append(TensorBoard(log_dir=stats_dir))
-
-
 
         try:
             self.trained_model.fit_generator(xy_train,
@@ -288,9 +286,13 @@ def _evaluate_final(model, xy_test, batch_size, history):
     if len(xy_test[0]):
         # evaluate with test data
         x_test, y_test = xy_test
+        pred = model.predict(x_test, batch_size=batch_size, verbose=0)
         test_loss, test_acc = model.evaluate(x_test, y_test, batch_size=batch_size, verbose=0)
         res['test_loss'] = test_loss
         res['test_acc'] = test_acc
+
+        # save predictions and ground truth values for metrics like ROC etc.
+        res['test'] = {'predictions': pred, 'ground-truth': y_test}
 
     return res
 
