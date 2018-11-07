@@ -69,7 +69,7 @@ class ListCommand(CommandPlugin):
             data_yaml = os.path.join(train_dir, AI, 'data.yaml')
             if os.path.isfile(data_yaml):
                 with open(data_yaml) as f:
-                    doc = yaml.load(f)
+                    doc = yaml.safe_load(f)
             else:
                 doc = {}
             info[AI] = {}
