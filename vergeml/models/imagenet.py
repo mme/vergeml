@@ -4,6 +4,7 @@ import numpy as np
 import os
 import os.path
 import random
+import csv
 
 @model('imagenet', descr='Image classifier model, with weights pre-trained on ImageNet.')
 class ImageNetModelPlugin(ModelPlugin):
@@ -240,9 +241,21 @@ class ImageNetModel:
             # load the best weights
             self.trained_model.load_weights(os.path.join(checkpoints_dir, "last_layers.h5"))
 
-            final_results = _evaluate_final(self.trained_model, xy_test, batch_size, history)
+            pred_test, final_results = _evaluate_final(self.trained_model, xy_test, batch_size, history)
 
             self.model = _save(self.trained_model, self.base_model, layers, labels, random_seed, checkpoints_dir)
+
+            if pred_test is not None:
+                # save predictions and ground truth values for metrics like ROC etc.
+                path = os.path.join(stats_dir, "test-predictions.csv")
+                with open(path, "w", newline='') as f:
+                    writer = csv.writer(f, dialect="excel")
+                    _, y_test = xy_test
+
+                    for pred, y in zip(pred_test, y_test):
+                        row = pred.tolist() + y.tolist()
+                        writer.writerow(row)
+
         return final_results
 
     def predict(self, f, k=5):
@@ -274,6 +287,7 @@ class ImageNetModel:
 
 def _evaluate_final(model, xy_test, batch_size, history):
     res = {}
+    pred_test = None
 
     if 'val_acc' in history.history:
         res['val_acc'] = max(history.history['val_acc'])
@@ -286,15 +300,12 @@ def _evaluate_final(model, xy_test, batch_size, history):
     if len(xy_test[0]):
         # evaluate with test data
         x_test, y_test = xy_test
-        pred = model.predict(x_test, batch_size=batch_size, verbose=0)
+        pred_test = model.predict(x_test, batch_size=batch_size, verbose=0)
         test_loss, test_acc = model.evaluate(x_test, y_test, batch_size=batch_size, verbose=0)
         res['test_loss'] = test_loss
         res['test_acc'] = test_acc
 
-        # save predictions and ground truth values for metrics like ROC etc.
-        res['test'] = {'predictions': pred, 'ground-truth': y_test}
-
-    return res
+    return pred_test, res
 
 
 def _makenet(x, num_layers, dropout, random_seed):
