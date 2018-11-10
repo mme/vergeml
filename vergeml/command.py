@@ -306,7 +306,8 @@ class Command:
                 continue
 
             if opt.flag:
-                assert opt.type in (bool, None)
+                opt_type = eval(opt.type) if isinstance(opt.type, str) else opt.type
+                assert opt_type in (bool, None)
                 longopts.append(opt.name)
             else:
                 longopts.append(opt.name + "=")
