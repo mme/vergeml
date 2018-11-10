@@ -247,7 +247,7 @@ class ImageNetModel:
 
             if pred_test is not None:
                 # save predictions and ground truth values for metrics like ROC etc.
-                path = os.path.join(stats_dir, "test-predictions.csv")
+                path = os.path.join(stats_dir, "predictions.csv")
                 with open(path, "w", newline='') as f:
                     writer = csv.writer(f, dialect="excel")
                     _, y_test = xy_test
