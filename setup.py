@@ -31,7 +31,8 @@ setup(
         # installed on demand
         'Pillow',
         'keras',
-        'waitress'
+        'waitress',
+        'matplotlib'
     ],
     # preprocess=vergeml.commands.preprocess:preprocess
     # mnist=vergeml.datasets.mnist:download
