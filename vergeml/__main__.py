@@ -272,6 +272,9 @@ def _configure_logging(level=logging.INFO):
     if not sys.warnoptions:
         import warnings
         warnings.simplefilter("ignore")
+        # TODO hack to get rid of deprecation warning that appeared allthough filters
+        # are set to ignore. Is there a more sane way?
+        warnings.warn = lambda *args, **kwargs: None
 
 def main(argv=None, plugins=PLUGINS):
     if argv is None:

@@ -21,8 +21,6 @@ class ROCPlot(CommandPlugin):
         from sklearn.metrics import roc_curve, auc
         import matplotlib.pyplot as plt
         from itertools import cycle
-
-        from sklearn.metrics import roc_curve, auc
         from scipy import interp
 
         lw = 2
