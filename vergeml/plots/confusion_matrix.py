@@ -26,14 +26,14 @@ class ConfusionMatrixPlot(CommandPlugin):
         try:
             labels = load_labels(env)
         except FileNotFoundError:
-            raise VergeMLError("Can't plot ROC chart - not supported by model.")
+            raise VergeMLError("Can't plot confusion matrix - not supported by model.")
         
         nclasses = len(labels)
 
         try:
             y_test, y_score = load_predictions(env, nclasses)
         except FileNotFoundError:
-            raise VergeMLError("Can't plot ROC chart - not supported by model.")
+            raise VergeMLError("Can't plot confusion matrix - not supported by model.")
 
         # From:
         # https://scikit-learn.org/stable/auto_examples/model_selection/plot_confusion_matrix.html#sphx-glr-auto-examples-model-selection-plot-confusion-matrix-py

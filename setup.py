@@ -66,6 +66,7 @@ setup(
     [vergeml.plot]
     roc=vergeml.plots.roc:ROCPlot
     confusion-matrix=vergeml.plots.confusion_matrix:ConfusionMatrixPlot
+    pr=vergeml.plots.pr:PRPlot
 
     [vergeml.operation]
     augment=vergeml.operations.augment:AugmentOperation
