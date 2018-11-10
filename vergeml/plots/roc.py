@@ -1,5 +1,6 @@
 from vergeml.command import command, CommandPlugin
 from vergeml.option import option
+from vergeml.plots import load_labels
 
 import os.path
 import csv
@@ -16,45 +17,27 @@ class ROCPlot(CommandPlugin):
         # - labels.txt in checkpoints
         # - predictions.csv in stats
 
-        # TODO hide deprecation error when importing
-        # maybe configure matplotlib as a lib?
         from sklearn.metrics import roc_curve, auc
         import matplotlib.pyplot as plt
         from itertools import cycle
         from scipy import interp
+        from vergeml.plots import load_labels, load_predictions
 
-        lw = 2
-       
-        # Get labels
-        path = os.path.join(env.checkpoints_dir(), "labels.txt")
-
-        if not os.path.exists(path):
+        try:
+            labels = load_labels(env)
+        except FileNotFoundError:
             raise VergeMLError("Can't plot ROC chart - not supported by model.")
         
-        with open(path) as labelsfile:
-            labels = labelsfile.read().strip().splitlines()
-            nclasses = len(labels)
-        
-        if args['class'] is not None and args['class'] not in labels:
+        if args['class']  and args['class'] not in labels:
             raise VergeMLError("Unknown class: " + args['class'])
-
-        # Get predictions
-        path = os.path.join(env.stats_dir(), "predictions.csv")
-
-        if not os.path.exists(path):
-            raise VergeMLError("Can't plot ROC chart - not supported by model.")
-
-        with open(path, newline='') as csvfile:
-            y_score = []
-            y_test = []
-            csv_reader = csv.reader(csvfile, dialect="excel")
-            for row in csv_reader:
-                assert len(row) == nclasses * 2
-                y_score.append(list(map(float, row[:nclasses])))
-                y_test.append(list(map(float, row[nclasses:])))
             
-            y_score = np.array(y_score)
-            y_test = np.array(y_test)
+        nclasses = len(labels)
+        lw = 2
+
+        try:
+            y_test, y_score = load_predictions(env, nclasses)
+        except FileNotFoundError:
+            raise VergeMLError("Can't plot ROC chart - not supported by model.")
 
         # From:
         # https://scikit-learn.org/stable/auto_examples/model_selection/plot_roc.html
