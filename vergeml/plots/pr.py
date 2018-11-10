@@ -10,6 +10,8 @@ import numpy as np
 @command('pr', descr="Plot a precision/recall curve.")
 @option('@AI', type='AI')
 @option('class', type='str', descr="The positive class.")
+
+# TODO add plots for multi label
 class PRPlot(CommandPlugin):
 
     def __call__(self, args, env):
@@ -33,6 +35,9 @@ class PRPlot(CommandPlugin):
             y_test, y_score = load_predictions(env, nclasses)
         except FileNotFoundError:
             raise VergeMLError("Can't plot PR curve - not supported by model.")
+        
+        # From:
+        # https://scikit-learn.org/stable/auto_examples/model_selection/plot_precision_recall.html#sphx-glr-auto-examples-model-selection-plot-precision-recall-py
         
         ix = labels.index(args['class'])
         y_test = y_test[:,ix].astype(np.int)
