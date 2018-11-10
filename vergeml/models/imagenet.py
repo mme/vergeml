@@ -298,7 +298,7 @@ class ImageNetModel:
         res['loss'] = history.history['loss'][-1]
 
         if len(xy_test[0]):
-            from sklearn.metrics import classification_report
+            from sklearn.metrics import classification_report, roc_auc_score
             # evaluate with test data
             x_test, y_test = xy_test
             pred_test = model.predict(x_test, batch_size=batch_size, verbose=0)
@@ -311,12 +311,15 @@ class ImageNetModel:
                                            target_names=self.labels, 
                                            digits=4, 
                                            output_dict=True)
+
+            res['auc'] = roc_auc_score(y_test.astype(np.int), pred_test)
+
             for label in self.labels:
                 stats = report[label]
                 res[label+"-precision"] = stats['precision']
                 res[label+"-recall"] = stats['recall']
                 res[label+"-f1"] = stats['f1-score']
-
+                
         return pred_test, res
 
 
