@@ -207,19 +207,20 @@ class Command:
         
         if subcommand_option:
             plugins = self.plugins.all(subcommand_option.subcommand)
-            max_name = max(map(len, plugins.keys()))
+            max_name = max(map(len, plugins.keys())) if plugins.keys() else 0
             IND = 2
             SPACE = 4
             name = subcommand_option.name.capitalize() + "s"
-            result += f"\n\n{name}:"
-            for k, v in plugins.items():
-                result += "\n" + str(IND * ' ')
-                space = (max_name + SPACE) - len(k)
-                cmd = Command.discover(v)
-                if cmd.descr:
-                    result += k + str(space * ' ') + cmd.descr
-                else:
-                    result += k
+            if plugins.keys():
+                result += f"\n\n{name}:"
+                for k, v in plugins.items():
+                    result += "\n" + str(IND * ' ')
+                    space = (max_name + SPACE) - len(k)
+                    cmd = Command.discover(v)
+                    if cmd.descr:
+                        result += k + str(space * ' ') + cmd.descr
+                    else:
+                        result += k
 
         if self.examples and not short:
             result += "\n\nExamples:\n"

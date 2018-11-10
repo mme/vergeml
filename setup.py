@@ -51,6 +51,7 @@ setup(
     list=vergeml.commands.ls:ListCommand
     download=vergeml.commands.download:DownloadCommand
     run=vergeml.commands.run:RunCommand
+    plot=vergeml.commands.plot:PlotCommand
     
     [vergeml.download]
     cats-and-dogs=vergeml.datasets.cats_and_dogs:CatsAndDogsDataset
@@ -61,6 +62,9 @@ setup(
     [vergeml.run]
     tensorboard=vergeml.services.tensorboard:TensorboardService
     rest=vergeml.services.rest:RestService
+
+    [vergeml.plot]
+    roc=vergeml.plots.roc:ROCPlot
 
     [vergeml.operation]
     augment=vergeml.operations.augment:AugmentOperation
