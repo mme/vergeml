@@ -4,6 +4,7 @@ import numpy as np
 import os
 import os.path
 import random
+import csv
 
 @model('imagenet', descr='Image classifier model, with weights pre-trained on ImageNet.')
 class ImageNetModelPlugin(ModelPlugin):
@@ -195,13 +196,13 @@ class ImageNetModel:
         self.trained_model = Model(input=input_layer, output=output_layer)
 
         if optimizer == 'adam':
-            self.trained_model.compile(loss='categorical_crossentropy',
-                                       optimizer=optimizers.Adam(lr=learning_rate, decay=decay),
-                                       metrics=['accuracy'])
+            optimizer = optimizers.Adam(lr=learning_rate, decay=decay)
         else:
-            self.trained_model.compile(loss="categorical_crossentropy",
-                                       optimizer=optimizers.SGD(lr=learning_rate, decay=decay, momentum=0.9),
-                                       metrics=["accuracy"])
+            optimizer = optimizers.SGD(lr=learning_rate, decay=decay, momentum=0.9)
+    
+        self.trained_model.compile(loss='categorical_crossentropy',
+                                   optimizer=optimizer,
+                                   metrics=['accuracy'])
 
         callbacks = callbacks.copy()
 
@@ -222,8 +223,6 @@ class ImageNetModel:
 
         callbacks.append(TensorBoard(log_dir=stats_dir))
 
-
-
         try:
             self.trained_model.fit_generator(xy_train,
                                              epochs=epochs,
@@ -242,9 +241,21 @@ class ImageNetModel:
             # load the best weights
             self.trained_model.load_weights(os.path.join(checkpoints_dir, "last_layers.h5"))
 
-            final_results = _evaluate_final(self.trained_model, xy_test, batch_size, history)
+            pred_test, final_results = self._evaluate_final(self.trained_model, xy_test, batch_size, history)
 
             self.model = _save(self.trained_model, self.base_model, layers, labels, random_seed, checkpoints_dir)
+
+            if pred_test is not None:
+                # save predictions and ground truth values for metrics like ROC etc.
+                path = os.path.join(stats_dir, "predictions.csv")
+                with open(path, "w", newline='') as f:
+                    writer = csv.writer(f, dialect="excel")
+                    _, y_test = xy_test
+
+                    for pred, y in zip(pred_test, y_test):
+                        row = pred.tolist() + y.tolist()
+                        writer.writerow(row)
+
         return final_results
 
     def predict(self, f, k=5):
@@ -274,25 +285,42 @@ class ImageNetModel:
         return [dec[:top]]
 
 
-def _evaluate_final(model, xy_test, batch_size, history):
-    res = {}
+    def _evaluate_final(self, model, xy_test, batch_size, history):
+        res = {}
+        pred_test = None
 
-    if 'val_acc' in history.history:
-        res['val_acc'] = max(history.history['val_acc'])
-        rev_ix = -1 - list(reversed(history.history['val_acc'])).index(res['val_acc'])
-        res['val_loss'] = history.history['val_loss'][rev_ix]
+        if 'val_acc' in history.history:
+            res['val_acc'] = max(history.history['val_acc'])
+            rev_ix = -1 - list(reversed(history.history['val_acc'])).index(res['val_acc'])
+            res['val_loss'] = history.history['val_loss'][rev_ix]
 
-    res['acc'] = history.history['acc'][-1]
-    res['loss'] = history.history['loss'][-1]
+        res['acc'] = history.history['acc'][-1]
+        res['loss'] = history.history['loss'][-1]
 
-    if len(xy_test[0]):
-        # evaluate with test data
-        x_test, y_test = xy_test
-        test_loss, test_acc = model.evaluate(x_test, y_test, batch_size=batch_size, verbose=0)
-        res['test_loss'] = test_loss
-        res['test_acc'] = test_acc
+        if len(xy_test[0]):
+            from sklearn.metrics import classification_report, roc_auc_score
+            # evaluate with test data
+            x_test, y_test = xy_test
+            pred_test = model.predict(x_test, batch_size=batch_size, verbose=0)
+            test_loss, test_acc = model.evaluate(x_test, y_test, batch_size=batch_size, verbose=0)
+            res['test_loss'] = test_loss
+            res['test_acc'] = test_acc
 
-    return res
+            report = classification_report(y_true = np.argmax(y_test, axis=1), 
+                                           y_pred = np.argmax(pred_test, axis=1),
+                                           target_names=self.labels, 
+                                           digits=4, 
+                                           output_dict=True)
+
+            res['auc'] = roc_auc_score(y_test.astype(np.int), pred_test)
+
+            for label in self.labels:
+                stats = report[label]
+                res[label+"-precision"] = stats['precision']
+                res[label+"-recall"] = stats['recall']
+                res[label+"-f1"] = stats['f1-score']
+                
+        return pred_test, res
 
 
 def _makenet(x, num_layers, dropout, random_seed):

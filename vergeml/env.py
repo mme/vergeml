@@ -520,6 +520,10 @@ class _Results:
                 v = float(v)
             elif isinstance(v, Labels):
                 v = list(v)
+            elif isinstance(v, np.ndarray):
+                v = v.tolist()
+            elif isinstance(v, dict):
+                v = self._convert(v)
             res[k] = v
         return res
 

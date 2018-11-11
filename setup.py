@@ -26,11 +26,13 @@ setup(
         'numpy',
         'pyyaml',
         'lz4',
+        'scikit-learn',
         # install this for the first release only - in a subsequent release dependencies should be
         # installed on demand
         'Pillow',
         'keras',
-        'waitress'
+        'waitress',
+        'matplotlib'
     ],
     # preprocess=vergeml.commands.preprocess:preprocess
     # mnist=vergeml.datasets.mnist:download
@@ -49,6 +51,7 @@ setup(
     list=vergeml.commands.ls:ListCommand
     download=vergeml.commands.download:DownloadCommand
     run=vergeml.commands.run:RunCommand
+    plot=vergeml.commands.plot:PlotCommand
     
     [vergeml.download]
     cats-and-dogs=vergeml.datasets.cats_and_dogs:CatsAndDogsDataset
@@ -59,6 +62,11 @@ setup(
     [vergeml.run]
     tensorboard=vergeml.services.tensorboard:TensorboardService
     rest=vergeml.services.rest:RestService
+
+    [vergeml.plot]
+    roc=vergeml.plots.roc:ROCPlot
+    confusion-matrix=vergeml.plots.confusion_matrix:ConfusionMatrixPlot
+    pr=vergeml.plots.pr:PRPlot
 
     [vergeml.operation]
     augment=vergeml.operations.augment:AugmentOperation
