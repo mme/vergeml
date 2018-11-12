@@ -1,33 +1,21 @@
-from vergeml.img import ImageType
+from vergeml.img import ImageType, RESIZE_METHODS, RESIZE_MODES, resize_image
 from vergeml.operation import OperationPlugin, operation
 from vergeml.option import option
 from PIL import Image
-
-_METHODS = ('nearest', 'box', 'bilinear', 'hamming', 'bicubic', 'lanczos', 'antialias')
-
-# Apple:
-# https://developer.apple.com/documentation/uikit/uiview/contentmode
-# Keras:
-# 'constant': kkkkkkkk|abcd|kkkkkkkk (cval=k)
-# 'nearest': aaaaaaaa|abcd|dddddddd
-# 'reflect': abcddcba|abcd|dcbaabcd
-# 'wrap': abcdabcd|abcd|abcdabcd
-
-_MODES = ('fill', 'aspect-fill', 'aspect-fit', 'nearest', 'black')
 
 @operation('resize', topic="image", descr="Resize an image to a fixed size.")
 @option('width', type=int, descr="Width of the new size.", validate='>0')
 @option('height', type=int, descr="Height of the new size.", validate='>0')
 @option('channels', type=int, descr="Number of channels.", validate=(0, 3))
-@option('method', type=str, descr="Scaling Method.", default="antialias", validate=_METHODS)
-@option('mode', type=str, descr="Scaling Mode.", default="fill", validate=_MODES)
+@option('method', type=str, descr="Scaling Method.", default="antialias", validate=RESIZE_METHODS)
+@option('mode', type=str, descr="Scaling Mode.", default="fill", validate=RESIZE_MODES)
 class ResizeOperation(OperationPlugin):
     type = ImageType
     
 
-    def __init__(self, width, height, channels=None, method='antialias', apply=None, mode='fill'):
-        assert method in _METHODS
-        assert mode in _MODES
+    def __init__(self, width, height, channels=None, method='antialias', mode='fill', apply=None):
+        assert method in RESIZE_METHODS
+        assert mode in RESIZE_MODES
         assert channels in (None, 1, 3)
 
         super().__init__(apply)
@@ -36,14 +24,17 @@ class ResizeOperation(OperationPlugin):
         self.height = height
         self.channels = channels
         self.method = method
+        self.mode = mode
 
     def transform(self, img, rng):
-
-        method = getattr(Image, self.method.upper())
-        img = img.resize((self.width, self.height), method)
+        
+        rimg = resize_image(img, self.width, self.height, self.method, self.mode)
+        
         if self.channels is None:
-            return img
+            if rimg.format != img.format:
+                rimg = rimg.convert(img.format)
+            return rimg
         elif self.channels == 1:
-            return img.convert('gray')
+            return rimg.convert('gray')
         elif self.channels == 3:
-            return img.convert('RGB')
+            return rimg.convert('RGB')
