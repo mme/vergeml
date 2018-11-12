@@ -58,7 +58,7 @@ class ROCPlot(CommandPlugin):
             ix = labels.index(args['class'])
             plt.figure()
             plt.plot(fpr[ix], tpr[ix], color='darkorange',
-                    lw=lw, label='ROC curve of class {0} (area = {1:0.2f})'.format(args['class'], roc_auc[ix]))
+                    lw=lw, label='ROC curve of class {0} (area = {1:0.4f})'.format(args['class'], roc_auc[ix]))
             plt.plot([0, 1], [0, 1], color='navy', lw=lw, linestyle='--')
             plt.xlim([0.0, 1.0])
             plt.ylim([0.0, 1.05])
@@ -89,19 +89,19 @@ class ROCPlot(CommandPlugin):
             # Plot all ROC curves
             plt.figure()
             plt.plot(fpr["micro"], tpr["micro"],
-                    label='micro-average ROC curve (area = {0:0.2f})'
+                    label='micro-average ROC curve (area = {0:0.4f})'
                         ''.format(roc_auc["micro"]),
                     color='deeppink', linestyle=':', linewidth=4)
 
             plt.plot(fpr["macro"], tpr["macro"],
-                    label='macro-average ROC curve (area = {0:0.2f})'
+                    label='macro-average ROC curve (area = {0:0.4f})'
                         ''.format(roc_auc["macro"]),
                     color='navy', linestyle=':', linewidth=4)
 
             colors = cycle(['aqua', 'darkorange', 'cornflowerblue', 'maroon', 'indigo'])
             for i, color in zip(range(nclasses), colors):
                 plt.plot(fpr[i], tpr[i], color=color, lw=lw,
-                        label='ROC curve of class {0} (area = {1:0.2f})'
+                        label='ROC curve of class {0} (area = {1:0.4f})'
                         ''.format(labels[i], roc_auc[i]))
 
             plt.plot([0, 1], [0, 1], 'k--', lw=lw)
