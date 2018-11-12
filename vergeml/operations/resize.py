@@ -3,25 +3,32 @@ from vergeml.operation import OperationPlugin, operation
 from vergeml.option import option
 from PIL import Image
 
+_METHODS = ('nearest', 'box', 'bilinear', 'hamming', 'bicubic', 'lanczos', 'antialias')
+
+# Apple:
+# https://developer.apple.com/documentation/uikit/uiview/contentmode
+# Keras:
+# 'constant': kkkkkkkk|abcd|kkkkkkkk (cval=k)
+# 'nearest': aaaaaaaa|abcd|dddddddd
+# 'reflect': abcddcba|abcd|dcbaabcd
+# 'wrap': abcdabcd|abcd|abcdabcd
+
+_MODES = ('fill', 'aspect-fill', 'aspect-fit', 'nearest', 'black')
+
 @operation('resize', topic="image", descr="Resize an image to a fixed size.")
 @option('width', type=int, descr="Width of the new size.", validate='>0')
 @option('height', type=int, descr="Height of the new size.", validate='>0')
 @option('channels', type=int, descr="Number of channels.", validate=(0, 3))
-@option('mode', type=str, descr="Scaling Mode.", validate=('fill', 'aspect-fill', 'aspect-fit'))
+@option('method', type=str, descr="Scaling Method.", default="antialias", validate=_METHODS)
+@option('mode', type=str, descr="Scaling Mode.", default="fill", validate=_MODES)
 class ResizeOperation(OperationPlugin):
     type = ImageType
-    # https://developer.apple.com/documentation/uikit/uiview/contentmode
+    
 
-    def __init__(self, width, height, channels=None, method='antialias', apply=None, mode='aspect-fill'):
-
-        # 'constant': kkkkkkkk|abcd|kkkkkkkk (cval=k)
-        # 'nearest': aaaaaaaa|abcd|dddddddd
-        # 'reflect': abcddcba|abcd|dcbaabcd
-        # 'wrap': abcdabcd|abcd|abcdabcd
-
-        assert(method in ('nearest', 'bicubic', 'antialias', 'bilinear', 'constant', 'nearest', 'reflect', 'warp'))
-        assert(mode in ('fill', 'aspect-fill', 'aspect-fit'))
-        assert(channels in (None, 1, 3))
+    def __init__(self, width, height, channels=None, method='antialias', apply=None, mode='fill'):
+        assert method in _METHODS
+        assert mode in _MODES
+        assert channels in (None, 1, 3)
 
         super().__init__(apply)
 
