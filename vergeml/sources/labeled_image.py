@@ -41,6 +41,32 @@ class LabeledImageSource(SourcePlugin):
             raise VergeMLError("No labels found.")
         
         self.files = self.scan_and_split_files(self._scan_dirs(classes_are_directories))
+
+
+        if self.oversample:
+            
+            nfiles = {}
+
+            for split, filenames in self.files.items():
+                
+                if split == 'test':
+                    # don't augment test samples
+                    nfiles['test'] = filenames
+                    continue
+
+                nfiles[split] = []
+                for filename, meta in filenames:
+                    # nfile = self.normalize_filename(split, filename)
+                    labels = self.classes["files"][filename]
+
+                    nfiles[split].append((filename, meta))
+                    for k, v in self.oversample.items():
+                        if k in labels:
+                            for _ in range(v-1):
+                                nfiles[split].append((filename, meta))
+
+            self.files = nfiles
+        
     
     def num_samples(self, split: str) -> int:
         return len(self.files[split])
@@ -119,24 +145,6 @@ class LabeledImageSource(SourcePlugin):
             # samples_dir
             train, val, test = super().scan_dirs()
             res = dict(train=train, val=val, test=test)
-        
-        if self.oversample:
-            
-            nres = {}
-
-            for split, filenames in res.items():
-                nres[split] = []
-                for filename in filenames:
-                    # nfile = self.normalize_filename(split, filename)
-                    labels = self.classes["files"][filename]
-
-                    nres[split].append(filename)
-                    for k, v in self.oversample.items():
-                        if k in labels:
-                            for _ in range(v-1):
-                                nres[split].append(filename)
-
-            res = nres
 
         return res['train'], res['val'], res['test']
 
