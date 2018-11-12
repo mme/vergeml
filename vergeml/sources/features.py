@@ -46,7 +46,11 @@ class ImageFeaturesSource(ImageSource, ImageNetFeatures):
                 self.model = get_custom_cnn(self.cnn, self.trainings_dir, self.output_layer)
                 self.preprocess_input = generic_preprocess_input
 
-        x = np.asarray(sample.x)
+        x = sample.x
+        # TODO better resize
+        x = x.convert('RGB')
+        x = x.resize((self.image_size, self.image_size))
+        x = np.asarray(x)
         x = np.expand_dims(x, axis=0)
         x = self.preprocess_input(x)
         features = self.model.predict(x)
