@@ -13,7 +13,7 @@ class ImageNetModelPlugin(ModelPlugin):
     @option('epochs', 5)
     @option('cnn', 'resnet-50', 'Name of the pretrained network.')
     @option('variant', '*auto*', 'Network variant.')
-    @option('size', "*auto*", 'Image input size.')
+    @option('size', "*auto*", 'Image input size.', type='Union[int,str]')
     @option('alpha', 1.0, 'Network alpha value.')
     @option('layers', 1, 'Number of layers to add.')
     @option('output-layer', '*last*', 'Name or index of the output layer.', type='Union[int,str]')
