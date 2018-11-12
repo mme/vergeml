@@ -22,10 +22,10 @@ ENV = None
 
 _DEFAULT_STATS = [dict(name='acc', title='Accuracy', category="TRAINING", format='.4f', smooth=True, log=True),
                   dict(name='loss', title='Loss', category="TRAINING", format='.4f', smooth=True, log=True),
-                  dict(name='val_acc', title='Accuracy', category="VALIDATION", format='.4f', smooth=True, log=True),
-                  dict(name='val_loss', title='Loss', category="VALIDATION", format='.4f', smooth=True, log=True),
-                  dict(name='test_acc', title='Accuracy', category="TESTING", format='.4f', smooth=True, log=False),
-                  dict(name='test_loss', title='Loss', category="TESTING", format='.4f', smooth=True, log=False),]
+                  dict(name='val_acc', title='Accuracy', category="VALIDATION", format='.4f', smooth=False, log=True),
+                  dict(name='val_loss', title='Loss', category="VALIDATION", format='.4f', smooth=False, log=True),
+                  dict(name='test_acc', title='Accuracy', category="TESTING", format='.4f', smooth=False, log=False),
+                  dict(name='test_loss', title='Loss', category="TESTING", format='.4f', smooth=False, log=False),]
 
 class Environment:
     
