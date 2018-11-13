@@ -71,6 +71,7 @@ class ImageNetModelPlugin(ModelPlugin):
     @predict('predict', descr="Predict image labels.")
     @option('@AI', type='AI')
     @option('labels', default=5, type=int, validate='>0', descr="The number of labels to predict.")
+    @option('resize', default='fill', type=str, validate=('fill', 'aspect-fill', 'aspect-fit'), descr="Resize Mode.")
     @option('compact', default=False, descr="Show results in a compact representation.", flag=True, command_line=True)
     @option('<files>', type='List[file]', descr="The images to predict.")
     def predict(self, args, env):
@@ -82,7 +83,7 @@ class ImageNetModelPlugin(ModelPlugin):
         res = []
 
         for ix, f in enumerate(files):
-            results = self.model.predict(f, k=args['labels'])
+            results = self.model.predict(f, k=args['labels'], resize_mode=args['resize'])
             res.append(results)
             if args['compact']:
                 DISPLAY.print("{}\t{}".format(f, results['prediction'][0]['label']))
@@ -258,16 +259,17 @@ class ImageNetModel:
 
         return final_results
 
-    def predict(self, f, k=5):
+    def predict(self, f, k=5, resize_mode='fill'):
         from keras.preprocessing import image
+        from vergeml.img import resize_image
 
         filename = os.path.basename(f)
 
         if not os.path.exists(f):
             return dict(filename=filename, prediction=[])
 
-        # TODO don't distort
-        img = image.load_img(f, target_size=(self.image_size, self.image_size))
+        img = image.load_img(f)
+        img = resize_image(img, self.image_size, self.image_size, 'antialias', resize_mode)
 
         x = image.img_to_array(img)
         x = np.expand_dims(x, axis=0)

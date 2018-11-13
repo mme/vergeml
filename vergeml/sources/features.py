@@ -3,7 +3,7 @@ from vergeml.io import SourcePlugin, source
 from vergeml.option import option
 from vergeml.sources.image import ImageSource
 from vergeml.sources.labeled_image import LabeledImageSource
-from vergeml.img import INPUT_PATTERNS
+from vergeml.img import INPUT_PATTERNS, resize_image
 import os.path
 import numpy as np
 
@@ -47,9 +47,9 @@ class ImageFeaturesSource(ImageSource, ImageNetFeatures):
                 self.preprocess_input = generic_preprocess_input
 
         x = sample.x
-        # TODO better resize
         x = x.convert('RGB')
-        x = x.resize((self.image_size, self.image_size))
+        x = resize_image(x, self.image_size, self.image_size, 'antialias', 'aspect-fill')
+        #x = x.resize((self.image_size, self.image_size))
         x = np.asarray(x)
         x = np.expand_dims(x, axis=0)
         x = self.preprocess_input(x)
@@ -84,7 +84,8 @@ class LabeledImageFeaturesSource(LabeledImageSource, ImageNetFeatures):
         x = sample.x
         # TODO better resize
         x = x.convert('RGB')
-        x = x.resize((self.image_size, self.image_size))
+        x = resize_image(x, self.image_size, self.image_size, 'antialias', 'aspect-fill')
+        # x = x.resize((self.image_size, self.image_size))
         x = np.asarray(x)
         x = np.expand_dims(x, axis=0)
         x = self.preprocess_input(x)
