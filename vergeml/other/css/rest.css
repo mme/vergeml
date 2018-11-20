@@ -169,7 +169,7 @@ body {
     min-width: 50px;
 }
 
-.row input {
+.row input, .row select {
     box-sizing: border-box;
     height: 32px;
     border: 1px solid #2F2F2F;
@@ -188,6 +188,7 @@ body {
     text-align: right;
     width: 90px;
 }
+
 
 .row label {
     margin-left: -1px;
