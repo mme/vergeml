@@ -109,6 +109,8 @@ class WSGIApp:
                 res.append(_TEMPLATE_FILE.format(name=display_name, multiple="", descr=descr, label='Select file...'))
             elif o.type == 'List[file]':
                 res.append(_TEMPLATE_FILE.format(name=display_name, multiple="multiple", descr=descr, label='Select files...'))
+            elif o.type in ('str', str) and isinstance(o.validate, (list, tuple)):
+                res.append(_TEMPLATE_LIST(name=display_name, descr=descr, opts=o.validate, default=o.default))
             else:
                 value = '' if o.default is None else o.default
                 res.append(_TEMPLATE_STRING.format(name=display_name, value=value, descr=descr))
@@ -333,3 +335,22 @@ _TEMPLATE_FILE = """
     <div class="description">{descr}</div>
 </div>
 """
+
+def _TEMPLATE_LIST(name, descr, opts, default):
+    def _fopt(opt):
+        sel = 'selected="selected"' if opt == default else ''
+        return f'<option value="{opt}" {sel}>{opt}</option>'
+
+    options = "\n".join(map(_fopt, opts))
+
+    return """
+    <div class="row">
+        <div class="input">
+            <span class="field">{name}</span>
+            <select name="{name}">
+                {options}
+            </select>
+        </div>
+        <div class="description">{descr}</div>
+    </div>
+    """.format(name=name, descr=descr, options=options)

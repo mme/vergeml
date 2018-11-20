@@ -48,26 +48,26 @@ function syntaxHighlight(json) {
 function ajaxPost (form, callback) {
     document.getElementById("submit-button").disabled = true;
     
+    
     var url = form.action;
     
     var formData = new FormData();
+    
 
     for (var i = 0; i < form.elements.length; i++) {
         var el = form.elements[i];
-
-        if ((el.tagName !== "INPUT" && el.tagName !== "TEXTAREA") || el.type == 'submit') {
+        
+        if ((el.tagName !== "INPUT" && el.tagName !== "TEXTAREA" && el.tagName !== "SELECT") || el.type == 'submit') {
             continue;
         }
 
         if (el.type == 'file') {
-            for(var i= 0; i < el.files.length; i++) {
-                formData.append(el.name, el.files[i])
+            for(var j= 0; j < el.files.length; j++) {
+                formData.append(el.name, el.files[j])
             }
         } else {
-            console.log(i, el.name, el.value)
             formData.append(el.name, el.value)
         }
-
     }
 
     fetch(url, {
