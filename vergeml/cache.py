@@ -68,10 +68,24 @@ class FileCache(Cache):
 
     def read(self, ix, n):
         assert self.mode == "r"
+        
+        # get the absolute start and end adresses of the whole chunk
+        start, _ = self.index[ix]
+        _, end = self.index[ix+n-1]
+
+        # read the bytes and wrap in memory view to avoid copying
+        chunk = memoryview(self.mm[start:end])
+
         res = []
+
         for i in range(n):
-            s,e = self.index[ix+i]
-            data = self.mm[s:e]
+            s, e = self.index[ix+i]
+
+            # convert addresses to be relative to the chunk we read
+            s = s - start
+            e = e - start
+
+            data = chunk[s:e]
             res.append((data, self.item_meta[ix+i]))
         return res
 
