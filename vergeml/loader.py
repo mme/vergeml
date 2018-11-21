@@ -11,8 +11,22 @@ import queue
 
 
 class _Pump(threading.Thread):
+    """Perform data loading in a background thread.
+
+    Continuously loads samples and fills up a queue, which is then read back
+    by the loader. To determine which samples to read, it takes an infinite 
+    generator function as an argument. The generator returns the index and the 
+    number of samples to read next. Once max_items are waiting in the queue, it 
+    will pause loading samples.
+    """
 
     def __init__(self, loader, split, ix_gen, max_items):
+        """
+        :param loader: Object responsible for loading samples.
+        :param split: train, val or test.
+        :param ix_gen: An infinite generator yielding tuples (ix, n).
+        :param max_items: The maximum number of samples to have in the queue.
+        """
         super().__init__()
         self.ix_gen = ix_gen
         self.outq = queue.Queue(max_items)
@@ -24,12 +38,27 @@ class _Pump(threading.Thread):
         while True:
             ix, n = next(self.ix_gen)
             samples = self.loader.perform_read(self.split, ix, n)
+            # this call will block until samples are removed when the queue 
+            # is full.
             self.outq.put((ix, n, samples))
 
     def perform_read(self, split: str, ix: int, n: int=1):
+        """Read samples from the queue which were previously read in the
+        background thread.
+
+        The parameters ix and n must be read in the exact order in which they
+        were placed in the queue.
+        """
+
+
+        # remove samples from the queue. (if there are no samples available, 
+        # block until the background thread puts samples in the queue)
         ix_, n_, samples = self.outq.get()
+        
+        # Sanity check
         assert ix_ == ix
         assert n == n
+        
         return samples
 
 
@@ -254,7 +283,7 @@ class LiveLoader(Loader):
     def num_samples(self, split: str) -> int:
         return self.cache[split]
 
-    def read_samples(self, split: str, index: int, n: int=1) -> Sample:
+    def perform_read(self, split: str, index: int, n: int=1) -> List[Sample]:
         mul = self.multipliers[split]
         offset = int(index % mul)
         start_index = int(index/mul)
