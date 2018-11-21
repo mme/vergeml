@@ -192,9 +192,18 @@ class BatchView:
         self.current_batch = 0
 
         if randomize:
-            self.ix_gen = _rand_batch_ixs(self.num_samples, self.batch_size, self.fetch_size, random_seed)
+            ix_fn = lambda _: _rand_batch_ixs(self.num_samples, self.batch_size, self.fetch_size, random_seed)
         else:
-            self.ix_gen = _ser_batch_ixs(self.num_samples, self.batch_size)
+            ix_fn = lambda _: _ser_batch_ixs(self.num_samples, self.batch_size)
+
+        # two identical ix generators - one for this object, one for the loader
+        self.ix_gen, ix_gen_ = map(ix_fn, range(2))
+
+        def pumpfn():
+            while True:
+                yield from next(ix_gen_)
+
+        self.loader.pump(self.split, pumpfn())
 
     def __iter__(self):
         self.current_batch = 0

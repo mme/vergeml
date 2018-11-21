@@ -3,8 +3,35 @@ from vergeml.utils import SPLITS
 import operator
 from functools import reduce
 from vergeml.cache import MemoryCache, SerializedFileCache
+from typing import List
 import io
 import os.path
+import threading
+import queue
+
+
+class _Pump(threading.Thread):
+
+    def __init__(self, loader, split, ix_gen, max_items):
+        super().__init__()
+        self.ix_gen = ix_gen
+        self.outq = queue.Queue(max_items)
+        self.split = split
+        self.loader = loader
+        self.daemon = True
+        
+    def run(self):
+        while True:
+            ix, n = next(self.ix_gen)
+            samples = self.loader.perform_read(self.split, ix, n)
+            self.outq.put((ix, n, samples))
+
+    def perform_read(self, split: str, ix: int, n: int=1):
+        ix_, n_, samples = self.outq.get()
+        assert ix_ == ix
+        assert n == n
+        return samples
+
 
 class Loader:
 
@@ -14,11 +41,17 @@ class Loader:
         self.ops = ops or []
         self.output = output
         self.cache = {}
+        self.pumps = {}
         self.progress_callback = progress_callback
 
     @property
     def meta(self):
         return self.input.meta
+
+    def pump(self, split, ix_gen, max_items=100):
+        if not split in self.pumps:
+            self.pumps[split] = _Pump(self, split, ix_gen, max_items)
+            self.pumps[split].start()
         
     def begin_read_samples(self):
         raise NotImplementedError
@@ -28,11 +61,19 @@ class Loader:
     
     def read_samples(self, split: str, index: int, n: int=1) -> Sample:
         samples = []
-        for item in self.cache[split].read(index, n):
+
+        reader = self.pumps.get(split, self)
+
+        for item in reader.perform_read(split, index, n):
             x, y = item[0]
             meta, rng = item[1]
             samples.append(Sample(x,y,meta,rng))
         return samples
+
+    def perform_read(self, split: str, index: int, n: int=1):
+        """Perform the read operation of the cache object.
+        """
+        return self.cache[split].read(index, n)
     
     def end_read_samples(self):
         pass
