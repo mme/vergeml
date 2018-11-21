@@ -123,19 +123,9 @@ class BatchView:
         self.ixs = None
         self._shuffle()
 
-        dynamic_batch_size = False
-        if isinstance(batch_size, tuple):
-            assert len(batch_size) == 2
-            assert batch_size[0] in ('static', 'dynamic')
-            if batch_size[0] == 'dynamic':
-                dynamic_batch_size = True
-            batch_size = batch_size[1]
-
         if batch_size > self.num_samples:
-            if dynamic_batch_size:
-                batch_size = self.num_samples
-            else:
-                raise VergeMLError("batch size must be smaller or equal to number of samples.")
+            # TODO issue warning
+            batch_size = self.num_samples
 
         self.batch_size = batch_size
         self.num_batches = self.num_samples // self.batch_size

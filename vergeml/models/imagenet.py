@@ -46,7 +46,7 @@ class ImageNetModelPlugin(ModelPlugin):
 
 
         # gather arguments
-        trainargs = dict(xy_train=env.data.load('train', view='batch', layout='arrays', batch_size=('dynamic', args['batch-size']),
+        trainargs = dict(xy_train=env.data.load('train', view='batch', layout='arrays', batch_size=args['batch-size'],
                                                 randomize=True, infinite=True),
                          xy_val=list(env.data.load('val', view='list', layout='arrays')),
                          xy_test=list(env.data.load('test', view='list', layout='arrays')),
