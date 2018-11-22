@@ -1,5 +1,5 @@
 from vergeml.utils import VergeMLError, parse_split
-from vergeml.views import ListView, BatchView, IteratorView
+from vergeml.views import BatchView, IteratorView
 from vergeml.io import Sample, SourcePlugin
 from vergeml.operation import BaseOperation
 from vergeml.loader import FileCachedLoader, LiveLoader, MemoryCachedLoader
@@ -123,7 +123,6 @@ class Data:
              layout:str='tuples',
              batch_size:int=64,
              fetch_size:Optional[int]=None,
-             stream:bool=True,
              infinite:bool=False,
              with_meta:bool=False,
              randomize:bool=False,
@@ -140,15 +139,11 @@ class Data:
                     - "list" (default): reads all data into memory and return it as **python list**
                       or optionally as numpy array (see the layout option).
 
-                    - "lazy-list": returns a list that reads the data on demand.
-
                     - "batch": return a **generator**, splitting the data into batches of batch_size.
                       The returned object supports getting the length (number of batches) via the len()
-                      function. The generator will stream the batches from disk if stream is set to
-                      True. Otherwise it will read all data into RAM.
+                      function.
 
-                    - "iter": return the data as an **iterator** object. Supports streaming from disk
-                      or loading all data into memory (via the stream parameter).
+                    - "iter": return the data as an **iterator** object.
 
         :param layout: Determines how x, y and (optionally meta) is returned.
                        Can be one of:
@@ -188,7 +183,7 @@ class Data:
         :param transform_y: a function that takes x as an argument and returns a transformed version.
                             Defaults to None (No transformation) """
 
-        assert view in ('list', 'lazy-list', 'batch', 'iter')
+        assert view in ('list', 'batch', 'iter')
         assert layout in ('tuples', 'lists', 'arrays')
         fetch_size = fetch_size or 8
 
@@ -216,16 +211,6 @@ class Data:
                 xs, ys, *meta = res
                 res = tuple([np.array(xs), np.array(ys)] + meta)
             return res
-
-        elif view == 'lazy-list':
-            return ListView(self.loader,
-                            split,
-                            with_meta,
-                            randomize,
-                            self.random_seed,
-                            fetch_size,
-                            transform_x,
-                            transform_y)
 
         elif view == 'batch':
             return BatchView(self.loader,
