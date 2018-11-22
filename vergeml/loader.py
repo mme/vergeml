@@ -1,5 +1,5 @@
 """
-A collection of classes supporting various data loading techniques.
+A collection of classes implementing various data loading techniques.
 """
 
 import operator
@@ -15,7 +15,7 @@ from vergeml.utils import SPLITS
 from vergeml.cache import MemoryCache, SerializedFileCache
 
 class _Pump(threading.Thread):
-    """Continuously perform data loading in a background thread. Like a pump.
+    """Continuously perform data loading in a background thread like a pump.
 
     Pump continuously loads samples and fills up a queue, which is then read back
     by the loader. To determine which samples to read, it takes an infinite
@@ -45,8 +45,8 @@ class _Pump(threading.Thread):
         while True:
             index, n_samples = next(self.ix_gen)
             samples = self.loader.perform_read(self.split, index, n_samples)
-            # this call will block until samples are removed when the queue
-            # is full.
+
+            # Blocks when the queue is full (until samples are read).
             self.outq.put((index, n_samples, samples))
 
     def perform_read(self, _split: str, index: int, n_samples: int = 1):
