@@ -26,7 +26,7 @@ class BoundingBox:
         self.y = y
         self.width = width
         self.height = height
-        
+
 
 class Data:
     """Handle loading, augmentation and caching of your sample data.
@@ -38,7 +38,7 @@ class Data:
         xy_train = data.load()
         # xy_train is now [(x1, y1), (x2, y2), ...]
 
-    This will automatically set up the needed configuration and it will be ready to use. 
+    This will automatically set up the needed configuration and it will be ready to use.
     Alternatively, it is possible to set it up manually by providing input, output and ops.
     """
 
@@ -52,8 +52,8 @@ class Data:
                  cache_input: Union[str, bool] = 'mem',
                  cache_output: Union[str, bool] = False,
                  plugins=PLUGINS):
-        """For automatic configuration, pass in an env object. To manually setup the data class, 
-        you need to provide at least the input parameter. If you want to provide a list of 
+        """For automatic configuration, pass in an env object. To manually setup the data class,
+        you need to provide at least the input parameter. If you want to provide a list of
         preprocessing operations ops to be applied to the data, you need to provide an output
         object as well.
 
@@ -78,7 +78,7 @@ class Data:
         self._progress_bar = None
         self.cache_input = cache_input
         self.cache_output = cache_output
-        
+
         if env:
             self._setup_from_env(env)
         else:
@@ -88,22 +88,28 @@ class Data:
             if self.output is None:
                 self.output = self.input
             self.loader = self._get_loader(cache_input, cache_output)
-    
+
     def _get_loader(self, cache_input, cache_output):
         if cache_input == 'disk':
-            input_loader = FileCachedLoader(self.cache_dir, self.input, progress_callback=self._progress_callback)
+            input_loader = FileCachedLoader(self.cache_dir, self.input)
+            input_loader.progress_callback = self._progress_callback
         elif cache_input == 'mem':
-            input_loader = MemoryCachedLoader(self.cache_dir, self.input, progress_callback=self._progress_callback)
+            input_loader = MemoryCachedLoader(self.cache_dir, self.input)
+            input_loader.progress_callback = self._progress_callback
         else:
             input_loader = self.input
 
         if cache_output == 'disk':
-            return FileCachedLoader(self.cache_dir, input_loader, self.ops, self.output, progress_callback=self._progress_callback)
+            loader = FileCachedLoader(self.cache_dir, input_loader, self.ops, self.output)
+            loader.progress_callback = self._progress_callback
+            return loader
         elif cache_output == 'mem':
-            return MemoryCachedLoader(self.cache_dir, input_loader, self.ops, self.output, progress_callback=self._progress_callback)
+            loader = MemoryCachedLoader(self.cache_dir, input_loader, self.ops, self.output)
+            loader.progress_callback = self._progress_callback
+            return loader
         else:
             return LiveLoader(self.cache_dir, input_loader, self.ops, self.output)
-            
+
     @property
     def meta(self):
         self.loader.begin_read_samples()
@@ -126,26 +132,26 @@ class Data:
              transform_y:Callable[[Any], Any]=lambda y: y):
 
         """
-        :param split: One of ("train", "val", "test"). Will return the split data as configured 
+        :param split: One of ("train", "val", "test"). Will return the split data as configured
                       via the env or via input. Defaults to "train".
 
-        :param view: A view determines the **class** which will hold the sample data. 
+        :param view: A view determines the **class** which will hold the sample data.
                      Possible values are:
 
-                    - "list" (default): reads all data into memory and return it as **python list** 
+                    - "list" (default): reads all data into memory and return it as **python list**
                       or optionally as numpy array (see the layout option).
-                    
+
                     - "lazy-list": returns a list that reads the data on demand.
 
-                    - "batch": return a **generator**, splitting the data into batches of batch_size. 
-                      The returned object supports getting the length (number of batches) via the len() 
-                      function. The generator will stream the batches from disk if stream is set to 
+                    - "batch": return a **generator**, splitting the data into batches of batch_size.
+                      The returned object supports getting the length (number of batches) via the len()
+                      function. The generator will stream the batches from disk if stream is set to
                       True. Otherwise it will read all data into RAM.
 
-                    - "iter": return the data as an **iterator** object. Supports streaming from disk 
+                    - "iter": return the data as an **iterator** object. Supports streaming from disk
                       or loading all data into memory (via the stream parameter).
 
-        :param layout: Determines how x, y and (optionally meta) is returned. 
+        :param layout: Determines how x, y and (optionally meta) is returned.
                        Can be one of:
 
                        - "tuples" (default): the data will be returned as (x,y) pairs.
@@ -158,7 +164,7 @@ class Data:
 
                        - "arrays": the data will be returned as numpy arrays [xs], [ys]
 
-                         array([[1, 2, 3], 
+                         array([[1, 2, 3],
                                 [4, 5, 6]])
 
         :param batch_size: Sample batch size. Applies to "batch" view only. Defaults to 64.
@@ -166,24 +172,24 @@ class Data:
         :param fetch_size: Fetch samples in pairs of fetch_size. None means the system will automatically
                            set a fetch size.
 
-        :param infinite: Applies to "batch" and "iter" views. If set to **True**, the returned 
-                         object will be an infinite generator object. 
+        :param infinite: Applies to "batch" and "iter" views. If set to **True**, the returned
+                         object will be an infinite generator object.
 
-            NOTE for KERAS users: This setting is useful when used in with the 
-            model.fit_generator() of the keras framework. Since len() will return the number of 
+            NOTE for KERAS users: This setting is useful when used in with the
+            model.fit_generator() of the keras framework. Since len() will return the number of
             steps per epoch, the steps_per_epoch of fit_generator() can be left unspecified.
 
         :param with_meta: If True, will return meta in addition to x and y.
 
         :param randomize: If True, the data will be returned in random order.
 
-        :param max_samples: The maximum amount of samples to return. 
+        :param max_samples: The maximum amount of samples to return.
                       Default is None (return all samples).
 
-        :param transform_x: a function that takes x as an argument and returns a transformed version. 
+        :param transform_x: a function that takes x as an argument and returns a transformed version.
                             Defaults to None (No transformation)
 
-        :param transform_y: a function that takes x as an argument and returns a transformed version. 
+        :param transform_y: a function that takes x as an argument and returns a transformed version.
                             Defaults to None (No transformation) """
 
         assert view in ('list', 'lazy-list', 'batch', 'iter')
@@ -193,11 +199,11 @@ class Data:
         if view == 'list':
             res = []
             self.loader.begin_read_samples()
-            
+
             num_samples = self.loader.num_samples(split)
             if max_samples is not None:
                 num_samples = min(num_samples, max_samples)
-            
+
             for sample in self.loader.read_samples(split, 0, num_samples):
                 x, y, m = sample.x, sample.y, sample.meta
                 x, y = transform_x(x), transform_y(y)
@@ -210,7 +216,7 @@ class Data:
             if layout in ('lists', 'arrays'):
                 res = tuple(map(list, zip(*res)))
                 if not res:
-                    res = ([], [], []) if with_meta else ([], []) 
+                    res = ([], [], []) if with_meta else ([], [])
 
             if layout == 'arrays':
                 xs, ys, *meta = res
@@ -219,13 +225,13 @@ class Data:
 
         elif view == 'lazy-list':
             return ListView(self.loader,
-                            split, 
-                            with_meta, 
+                            split,
+                            with_meta,
                             randomize,
                             self.random_seed,
                             fetch_size,
-                            max_samples, 
-                            transform_x, 
+                            max_samples,
+                            transform_x,
                             transform_y)
 
         elif view == 'batch':
@@ -267,7 +273,7 @@ class Data:
         config['samples-dir'] = self.env.get('samples-dir')
         config['random-seed'] = self.env.get('random-seed')
         config['trainings-dir'] = self.env.get('trainings-dir')
-        
+
         # get the name of the input plugin
         input_name = self.env.get('data.input.type')
         if not input_name:
@@ -281,7 +287,7 @@ class Data:
         input_class = self.plugins.get('vergeml.io', input_name)
         if not input_class:
             raise VergeMLError("input name not found: {}".format(input_name))
-            
+
         # TODO validate configuration and set defaults
         del input_conf['type']
 
@@ -334,14 +340,14 @@ class Data:
         output_conf = self.env.get('data.output') or self.env.get('data.input').copy()
         output_conf['name'] = output_name
         output_conf.update(config)
-        
+
         # instantiate the output plugin
         output_class = self.plugins.get('vergeml.io', output_name)
         if not output_class:
             raise VergeMLError("output name not found: {}".format(output_name))
-            
+
         self.output = output_class(output_conf)
-        
+
         cache = env.get("data.cache")
         if cache == 'mem-in':
             self.cache_input, self.cache_output = 'mem', False
@@ -353,7 +359,7 @@ class Data:
             self.cache_input, self.cache_output = False, 'disk'
         elif cache == 'none':
             self.cache_input, self.cache_output = False, False
-        
+
         self.loader = self._get_loader(self.cache_input, self.cache_output)
 
     def num_samples(self, split):
@@ -361,7 +367,7 @@ class Data:
         res = self.loader.num_samples(split)
         self.loader.end_read_samples()
         return res
-    
+
     def _progress_callback(self, n, t):
         if t:
             if n == -1:

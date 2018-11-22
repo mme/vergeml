@@ -20,11 +20,11 @@ def operation(name, descr=None, long_descr=None, topic='general', apply=True):
     """
     def decorator(o):
         assert getattr(o, _OPERATION_META_KEY, None) is None
-        
+
         options = Option.discover(o)
-        cmd = Operation(name, 
-                        descr=descr, 
-                        long_descr=long_descr, 
+        cmd = Operation(name,
+                        descr=descr,
+                        long_descr=long_descr,
                         apply=apply,
                         options=options,
                         topic=topic)
@@ -56,20 +56,20 @@ class Operation:
 class BaseOperation:
     """Base class for processing samples.
 
-    This class can be used to augment, filter, transform and combine samples. 
-    To support this variety of use-cases, BaseOperation offers fine-grained control 
+    This class can be used to augment, filter, transform and combine samples.
+    To support this variety of use-cases, BaseOperation offers fine-grained control
     over how samples are being processed.
 
-    When an operation changes the number of output samples, it must return the 
-    factor in _multiplier().
+    When an operation changes the number of output samples, it must return the
+    factor in multiplier().
     """
 
-    def _configuration(self):
+    def configuration(self):
         """Return the configuration of the BaseOperation instance.
 
-        Since operations play a role in data processing, any change in a operation 
-        pipeline must result in a different hash value for a dataset. To capture the 
-        configuration of a preprocessing operation, BaseOperation defines this method, 
+        Since operations play a role in data processing, any change in a operation
+        pipeline must result in a different hash value for a dataset. To capture the
+        configuration of a preprocessing operation, BaseOperation defines this method,
         which can be overridden when needed.
         """
         return self.__dict__
@@ -82,12 +82,12 @@ class BaseOperation:
 
         :return: A generator yielding samples
 
-        The process function is expected to first transform the sample and then to call 
-        the next BaseOperation, yielding the resulting sample as a return value. 
+        The process function is expected to first transform the sample and then to call
+        the next BaseOperation, yielding the resulting sample as a return value.
         """
         raise NotImplementedError
-    
-    def _multiplier(self) -> float:
+
+    def multiplier(self) -> float:
         """Return the factor by which the operation changes the number of output samples"""
         return 1.0
 
@@ -95,13 +95,13 @@ class BaseOperation:
 class OperationPlugin(BaseOperation):
     """Simplified Operations.
 
-    Most operations will not need the raw power of BaseOperation, so an easier to use 
-    class is provided. In addition to simplified processing, it also offers the following 
+    Most operations will not need the raw power of BaseOperation, so an easier to use
+    class is provided. In addition to simplified processing, it also offers the following
     functionality:
 
-    - control which split the operation is applied to 
+    - control which split the operation is applied to
     - TODO control which labels the operation is applied to
-    - control if the operation is applied to the samples or the ground truth or both. 
+    - control if the operation is applied to the samples or the ground truth or both.
     - Automatic type checking so that an operation is only applied to supported sample data.
     """
 
@@ -147,9 +147,9 @@ class OperationPlugin(BaseOperation):
 
         :return: the transformed data
 
-        transform() will pass in data, which can be either x or the y. 
-        When x and y of the same sample are processed with transform, the random number 
-        generator will be reset on the second call so that both pieces of data are 
+        transform() will pass in data, which can be either x or the y.
+        When x and y of the same sample are processed with transform, the random number
+        generator will be reset on the second call so that both pieces of data are
         processed with the same random numbers.
         """
         raise NotImplementedError
@@ -163,8 +163,8 @@ class OperationPlugin(BaseOperation):
 
         :return: a tuple (x, y)
 
-        When you need to transform x and y values in the same method, for example 
-        when they are images with different sizes and they need to be resized to have 
+        When you need to transform x and y values in the same method, for example
+        when they are images with different sizes and they need to be resized to have
         the same size, override this method.
         """
         rngstate = rng.getstate()
@@ -188,7 +188,7 @@ class OperationPlugin(BaseOperation):
 
         :return: the transformed sample:
 
-        When you don't care about the apply functionality and just want to process the 
+        When you don't care about the apply functionality and just want to process the
         sample, override this method.
         """
         if self.apply.intersection(set(SPLITS)) \
@@ -207,7 +207,7 @@ class OperationPlugin(BaseOperation):
                 nextop, *rest = ops
                 yield from nextop.process(s1, rest) # pylint: disable=E1101
 
-    def _configuration(self):
+    def configuration(self):
         # CORRECT:
         # res = self.__dict__.copy()
         # if 'apply' in res:

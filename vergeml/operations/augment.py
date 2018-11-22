@@ -9,10 +9,10 @@ class AugmentOperation(OperationPlugin):
 
     def __init__(self, variants, apply=None):
         super().__init__(apply)
-        
+
         if not isinstance(variants, int):
             raise VergeMLError("The parameter 'variants' of 'augment' must be of type 'int'.")
-        
+
         self.variants = variants
 
     def transform_sample(self, sample):
@@ -22,6 +22,6 @@ class AugmentOperation(OperationPlugin):
         else:
             for _ in range(self.variants):
                 yield copy(sample)
-    
-    def _multiplier(self):
+
+    def multiplier(self):
         return self.variants
