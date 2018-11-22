@@ -17,7 +17,6 @@ class ListView:
                  randomize=False,
                  random_seed=2204,
                  fetch_size=8,
-                 max_samples=None,
                  transform_x=lambda x: x,
                  transform_y=lambda y : y):
 
@@ -28,7 +27,7 @@ class ListView:
         self.transform_y = transform_y
         self.loader.begin_read_samples()
         num_samples = self.loader.num_samples(self.split)
-        self.num_samples = min(num_samples, max_samples if max_samples is not None else num_samples)
+        self.num_samples = num_samples
         self.loader.end_read_samples()
         self.ixs = None
         if randomize:
@@ -174,7 +173,6 @@ class BatchView:
                  infinite,
                  with_meta,
                  layout,
-                 max_samples,
                  transform_x,
                  transform_y):
 
@@ -183,11 +181,6 @@ class BatchView:
 
         self.loader.begin_read_samples()
         self.num_samples = self.loader.num_samples(self.split)
-
-        # TODO do we really need max_samples ?
-        if max_samples:
-            self.num_samples = min(self.num_samples, max_samples)
-
         self.loader.end_read_samples()
 
         self.infinite = infinite
@@ -262,7 +255,6 @@ class IteratorView:
                  fetch_size=8,
                  infinite=False,
                  with_meta=False,
-                 max_samples=None,
                  transform_x=lambda x: x,
                  transform_y=lambda y: y):
 
@@ -271,7 +263,7 @@ class IteratorView:
 
         self.loader.begin_read_samples()
         num_samples = self.loader.num_samples(self.split)
-        self.num_samples = min(num_samples, max_samples if max_samples is not None else num_samples)
+        self.num_samples = num_samples
         self.loader.end_read_samples()
 
         self.infinite = infinite
