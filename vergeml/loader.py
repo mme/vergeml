@@ -15,13 +15,15 @@ from vergeml.utils import SPLITS
 from vergeml.cache import MemoryCache, SerializedFileCache
 
 class _Pump(threading.Thread):
-    """Continuously perform data loading in a background thread like a pump.
+    """Continuously perform data loading in a background thread like a
+    pump.
 
-    Pump continuously loads samples and fills up a queue, which is then read back
-    by the loader. To determine which samples to read, it takes an infinite
-    generator function as an argument. The generator returns the index and the
-    number of samples to read next. Once max_items are waiting in the queue, it
-    will pause loading samples.
+    Pump continuously loads samples and fills up a queue, which is then
+    read back by the loader. To determine which samples to read, it
+    takes an infinite generator function as an argument. The generator
+    returns the index and the number of samples to read next.
+    Once max_items are waiting in the queue, it will pause loading
+    samples.
     """
 
     def __init__(self, loader, split, ix_gen, max_items):
@@ -29,7 +31,8 @@ class _Pump(threading.Thread):
         :param loader: Object responsible for loading samples.
         :param split: train, val or test.
         :param ix_gen: An infinite generator yielding tuples (ix, n).
-        :param max_items: The maximum number of samples to have in the queue.
+        :param max_items: The maximum number of samples to have in the
+                          queue.
         """
         super().__init__()
         self.ix_gen = ix_gen
@@ -53,8 +56,8 @@ class _Pump(threading.Thread):
         """Read samples from the queue which were previously read in the
         background thread.
 
-        Samples must be read in the exact order in which they were placed
-        in the queue, i.e. index and n_samples must match.
+        Samples must be read in the exact order in which they were
+        placed in the queue, i.e. index and n_samples must match.
         """
 
 
@@ -77,9 +80,6 @@ class Loader:
     """Abstract base class for loaders.
     """
 
-    # This function can be set from the outside to receive progress updates.
-    progress_callback = lambda n, t: None
-
     def __init__(self, cache_dir, input, ops=None, output=None): # pylint: disable=W0622
         self.cache_dir = cache_dir
         self.input = input
@@ -88,23 +88,39 @@ class Loader:
         self.cache = {}
         self.pumps = {}
 
+
+        self._progress_callback = lambda n, t: None
+
     @property
     def meta(self):
         """Metadata of the loaded samples, e.g. all labels.
         """
         return self.input.meta
 
+    @property
+    def progress_callback(self):
+        """Set this callback in order to receive progress updates.
+        """
+        return self._progress_callback
+
+    @progress_callback.setter
+    def progress_callback(self, value):
+        """Setter for progress_callback.
+        """
+        self._progress_callback = value
+
+
     def pump(self, split, ix_gen, max_items=100):
         """Set up the pump for a split.
 
-        Typically used by a view to set up the pumping mechanism. This will
-        start a background thread which will continuously load samples, also
-        during training.
+        Typically used by a view to set up the pumping mechanism. This
+        will start a background thread which will continuously load
+        samples, also during training.
 
-        It works by receiving a generator which provides the pump with the index
-        and number of the next samples to load. When read_samples is called later,
-        samples must be read in the same order as previously returned by the
-        generator.
+        It works by receiving a generator which provides the pump with
+        the index and number of the next samples to load. When
+        read_samples is called later, samples must be read in the same
+        order as previously returned by the generator.
         """
         if not split in self.pumps:
             self.pumps[split] = _Pump(self, split, ix_gen, max_items)
@@ -130,6 +146,7 @@ class Loader:
 
         for item in reader.perform_read(split, index, n_samples):
             x, y = item[0] # pylint: disable=C0103
+
             meta, rng = item[1]
             samples.append(Sample(x, y, meta, rng))
 
@@ -189,8 +206,7 @@ class Loader:
             op1, *oprest = self.ops
             opfn = lambda s: op1.process(s, oprest)
 
-
-        if raw:
+        if raw and not self.output:
         # read raw samples
             readfn = lambda i: self.input.read_raw_samples(split, i)[0]
         elif self.output:
@@ -229,12 +245,12 @@ class MemoryCachedLoader(Loader):
         total = sum(map(self._calculate_num_samples, SPLITS))
 
         i = 0
-        self.progress_callback(-1, total)
+        self._progress_callback(-1, total)
         for split in SPLITS:
             cache = self.cache[split]
             for sample in self._iter_samples(split):
                 cache.write((sample.x, sample.y), (sample.meta, sample.rng))
-                self.progress_callback(i, total)
+                self._progress_callback(i, total)
                 i = i + 1
 
         self.input.end_read_samples()
@@ -269,7 +285,7 @@ class FileCachedLoader(Loader):
             i, cache = 0, None
 
             try:
-                self.progress_callback(-1, total)
+                self._progress_callback(-1, total)
 
                 for split, path in paths:
                     if not os.path.exists(path):
@@ -278,7 +294,7 @@ class FileCachedLoader(Loader):
 
                         for sample in self._iter_samples(split, raw=True):
                             cache.write((sample.x, sample.y), (sample.meta, sample.rng))
-                            self.progress_callback(i, total)
+                            self._progress_callback(i, total)
                             i += 1
                         cache.close()
 
@@ -318,7 +334,7 @@ class FileCachedLoader(Loader):
 
 
 class LiveLoader(Loader):
-    """Load sample data live.
+    """Load live sample data.
     """
 
     multipliers = None
@@ -380,4 +396,6 @@ class LiveLoader(Loader):
             else:
                 sample.rng = self.rngs[split][i]
 
-        return res[offset: offset+n_samples]
+        res = res[offset: offset+n_samples]
+
+        return list(map(lambda s: ((s.x, s.y), (s.meta, s.rng)), res))
