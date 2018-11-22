@@ -269,7 +269,7 @@ def _test_data_meta(data):
     assert data.meta['some-meta'] == 'meta-value'
 
 def _test_data_num_samples(data):
-    assert data.num_samples('train')  == 8
+    assert data.num_samples('train') == 8
     assert data.num_samples('test') == 1
     assert data.num_samples('val') == 1
 
