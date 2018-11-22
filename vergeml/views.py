@@ -1,8 +1,12 @@
-import numpy as np
+"""
+This module implements the data structures returned by Data.load() to
+support the unique data loading requirements of different deep learning
+libraries.
+"""
+
 import random
 import itertools
-from operator import itemgetter
-from vergeml.utils import VergeMLError
+import numpy as np
 
 class ListView:
 
@@ -86,7 +90,7 @@ class ListView:
 
         return res
 
-def _rand_batch_ixs(num_samples:int, batch_size:int, fetch_size:int, random_seed:int):
+def _rand_batch_ixs(num_samples: int, batch_size: int, fetch_size: int, random_seed: int):
     """A generator which yields a list of tuples (offset, size) in random order.
 
     This list will be used by the data loader to efficiently load samples and pass it to
@@ -102,7 +106,8 @@ def _rand_batch_ixs(num_samples:int, batch_size:int, fetch_size:int, random_seed
 
     while True:
         if fetch_size * 3 < num_samples:
-            # if the number of samples is too small, having a random offset makes no sense
+            # if the number of samples is too small, having a random offset
+            # makes no sense
             offset = rng.randint(0, fetch_size)
         else:
             offset = 0
@@ -115,10 +120,11 @@ def _rand_batch_ixs(num_samples:int, batch_size:int, fetch_size:int, random_seed
         while ixs:
             next_fetch = ixs.pop(0)
 
-            # calculate the next fetch size - depending on the samples remaining and the number
-            # of samples required to fill the batch
+            # calculate the next fetch size depending on the samples remaining
+            # and the number of samples required to fill the batch
 
-            next_fetch_size = min(fetch_size, num_samples - next_fetch, batch_size - batch_count)
+            next_fetch_size = min(fetch_size,
+                                  num_samples - next_fetch, batch_size - batch_count)
 
             batch.append((next_fetch, next_fetch_size))
             batch_count += next_fetch_size
@@ -142,8 +148,11 @@ def _ser_batch_ixs(num_samples, batch_size):
 
         batch.append((next_fetch, next_fetch_size))
         batch_count += next_fetch_size
-       
+
         if batch_count == batch_size:
+
+            # If we have enough samples to fill the batch size, yield
+            # the indices and reset the batch count.
             yield batch
             batch, batch_count = [], 0
 
@@ -214,7 +223,7 @@ class BatchView:
 
     def __next__(self):
 
-        if self.current_batch >= self.num_batches and not self.infinite:    
+        if self.current_batch >= self.num_batches and not self.infinite:
             raise StopIteration
 
         # BEGIN loading samples from the data loader
