@@ -11,8 +11,6 @@ from vergeml.io import SourcePlugin, source, Sample
 
 # pylint: disable=C0111
 
-# IteratorView
-
 def test_iterview_default():
     loader = LiveLoader('.cache', SourceTest())
     iterview = IteratorView(loader, 'train')
@@ -23,7 +21,6 @@ def test_iterview_infinite():
     iterview = IteratorView(loader, 'train', infinite=True)
     assert list(map(lambda tp: tp[0], itertools.islice(iterview, 150))) \
         == list(range(100)) + list(range(50))
-
 
 def test_iterview_random():
     loader = LiveLoader('.cache', SourceTest())
