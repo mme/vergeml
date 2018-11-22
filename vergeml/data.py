@@ -213,28 +213,30 @@ class Data:
             return res
 
         elif view == 'batch':
-            return BatchView(self.loader,
-                             split,
-                             batch_size,
-                             randomize,
-                             self.random_seed,
-                             fetch_size,
-                             infinite,
-                             with_meta,
-                             layout,
-                             transform_x,
-                             transform_y)
+
+            return BatchView(loader=self.loader,
+                             split=split,
+                             layout=layout,
+                             batch_size=batch_size,
+                             fetch_size=fetch_size,
+                             infinite=infinite,
+                             with_meta=with_meta,
+                             randomize=randomize,
+                             random_seed=self.random_seed,
+                             transform_x=transform_x,
+                             transform_y=transform_y)
 
         elif view == 'iter':
-            return IteratorView(self.loader,
-                                split,
-                                randomize,
-                                self.random_seed,
-                                fetch_size,
-                                infinite,
-                                with_meta,
-                                transform_x,
-                                transform_y)
+
+            return IteratorView(loader=self.loader,
+                                split=split,
+                                fetch_size=fetch_size,
+                                infinite=infinite,
+                                with_meta=with_meta,
+                                randomize=randomize,
+                                random_seed=self.random_seed,
+                                transform_x=transform_x,
+                                transform_y=transform_y)
 
     def _setup_from_env(self, env):
         # TODO type check arguments of input and output

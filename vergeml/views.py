@@ -6,6 +6,8 @@ libraries.
 
 import random
 import itertools
+from typing import Callable, Any
+
 import numpy as np
 
 def _rand_batch_ixs(num_samples: int, batch_size: int, fetch_size: int, random_seed: int):
@@ -80,51 +82,52 @@ def _ser_batch_ixs(num_samples, batch_size):
             current_index = 0
 
 
-class BatchView:
 
-    def __init__(self,
+def _pumpfn(ix_gen):
+    while True:
+        yield from next(ix_gen, None)
+
+class BatchView: # pylint: disable=R0902
+    """Generator that returns data as batches (optionally infinite).
+    """
+
+    def __init__(self, # pylint: disable=R0913
                  loader,
                  split,
-                 batch_size,
-                 randomize,
-                 random_seed,
-                 fetch_size,
-                 infinite,
-                 with_meta,
-                 layout,
-                 transform_x,
-                 transform_y):
+                 layout: str = 'tuples',
+                 batch_size: int = 64,
+                 fetch_size: int = 8,
+                 infinite: bool = False,
+                 with_meta: bool = False,
+                 randomize: bool = False,
+                 random_seed: int = 2204,
+                 transform_x: Callable[[Any], Any] = lambda x: x,
+                 transform_y: Callable[[Any], Any] = lambda y: y):
 
         self.loader = loader
         self.split = split
 
         self.loader.begin_read_samples()
-        self.num_samples = self.loader.num_samples(self.split)
+        num_samples = self.loader.num_samples(self.split)
         self.loader.end_read_samples()
 
         self.infinite = infinite
         self.with_meta = with_meta
         self.transform_x = transform_x
         self.transform_y = transform_y
-        self.fetch_size = fetch_size
-        self.batch_size = batch_size
         self.layout = layout
-        self.num_batches = self.num_samples // self.batch_size
+        self.num_batches = num_samples // batch_size
         self.current_batch = 0
 
         if randomize:
-            ix_fn = lambda _: _rand_batch_ixs(self.num_samples, self.batch_size, self.fetch_size, random_seed)
+            ix_fn = lambda: _rand_batch_ixs(num_samples, batch_size, fetch_size, random_seed)
         else:
-            ix_fn = lambda _: _ser_batch_ixs(self.num_samples, self.batch_size)
+            ix_fn = lambda: _ser_batch_ixs(num_samples, batch_size)
 
-        # two identical ix generators - one for this object, one for the loader
-        self.ix_gen, ix_gen_ = map(ix_fn, range(2))
-
-        def pumpfn():
-            while True:
-                yield from next(ix_gen_)
-
-        self.loader.pump(self.split, pumpfn())
+        # We generate two identical ix generators - one for the view and
+        # one for the loader
+        self.ix_gen = ix_fn()
+        self.loader.pump(self.split, _pumpfn(ix_fn()))
 
     def __iter__(self):
         self.current_batch = 0
@@ -142,10 +145,12 @@ class BatchView:
         self.loader.begin_read_samples()
 
         res = []
-        for ix, n in next(self.ix_gen):
+        for index, n_samples in next(self.ix_gen):
 
-            samples = self.loader.read_samples(self.split, ix, n)
+            samples = self.loader.read_samples(self.split, index, n_samples)
             for sample in samples:
+
+                # pylint: disable=C0103
                 x, y, m = sample.x, sample.y, sample.meta
                 x, y = self.transform_x(x), self.transform_y(y)
                 res.append((x, y, m) if self.with_meta else (x, y))
@@ -160,20 +165,24 @@ class BatchView:
             res = tuple(map(list, zip(*res)))
 
         if self.layout == 'arrays':
+
+            # pylint: disable=C0103
             xs, ys, *meta = res
             res = tuple([np.array(xs), np.array(ys)] + meta)
 
         return res
 
-class IteratorView:
-    def __init__(self,
+class IteratorView: # pylint: disable=R0902
+    """Generator that returns one sample at a time.
+    """
+    def __init__(self, # pylint: disable=R0913
                  loader,
                  split,
-                 randomize=False,
-                 random_seed=2204,
                  fetch_size=8,
                  infinite=False,
                  with_meta=False,
+                 randomize=False,
+                 random_seed=2204,
                  transform_x=lambda x: x,
                  transform_y=lambda y: y):
 
@@ -181,8 +190,7 @@ class IteratorView:
         self.split = split
 
         self.loader.begin_read_samples()
-        num_samples = self.loader.num_samples(self.split)
-        self.num_samples = num_samples
+        self.num_samples = self.loader.num_samples(self.split)
         self.loader.end_read_samples()
 
         self.infinite = infinite
@@ -198,8 +206,12 @@ class IteratorView:
 
     def _shuffle(self):
         self.ixs = range(0, self.num_samples)
+
         if self.rng:
-            self.ixs = [self.ixs[i:i + self.fetch_size] for i in range(0, len(self.ixs), self.fetch_size)]
+            # When randomizing sample order, make sure to lay out samples
+            # according to fetch size to improve performance.
+            self.ixs = [self.ixs[i:i + self.fetch_size]
+                        for i in range(0, len(self.ixs), self.fetch_size)]
             self.rng.shuffle(self.ixs)
             self.ixs = list(itertools.chain.from_iterable(self.ixs))
 
@@ -217,8 +229,10 @@ class IteratorView:
             if not self.infinite:
                 raise StopIteration
 
-        ix = self.ixs[self.current_index]
-        sample = self.loader.read_samples(self.split, ix, 1)[0]
+        index = self.ixs[self.current_index]
+        sample = self.loader.read_samples(self.split, index, 1)[0]
+
+        # pylint: disable=C0103
         x, y, m = sample.x, sample.y, sample.meta
         x, y = self.transform_x(x), self.transform_y(y)
         res = (x, y, m) if self.with_meta else (x, y)
