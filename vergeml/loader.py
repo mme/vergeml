@@ -77,7 +77,7 @@ class _Pump(threading.Thread):
 
 
 class Loader:
-    """Abstract base class for loaders.
+    """Abstract base class for data loaders.
     """
 
     def __init__(self, cache_dir, input, ops=None, output=None): # pylint: disable=W0622
@@ -228,7 +228,7 @@ def _get_multiplier(split, operation):
     return operation.multiplier()
 
 class MemoryCachedLoader(Loader):
-    """Load sample data into RAM.
+    """Load sample data into a memory cache.
     """
 
     def begin_read_samples(self):
@@ -258,7 +258,7 @@ class MemoryCachedLoader(Loader):
 
 
 class FileCachedLoader(Loader):
-    """Cache sample data in a file.
+    """Cache sample data in a file cache.
     """
 
     def begin_read_samples(self):
@@ -275,11 +275,9 @@ class FileCachedLoader(Loader):
 
         paths = [(split, self._cache_path(split, hashed_state)) for split in SPLITS]
 
-        # only keep the splits we have to process
-        paths = [(s, p) for s, p in paths if not os.path.exists(p)]
-
         # get the total number of samples
-        total = sum([self._calculate_num_samples(s) for s, _ in paths])
+        total = sum([self._calculate_num_samples(s) for s, p in paths
+                     if not os.path.exists(p)])
 
         if total:
             i, cache = 0, None
@@ -334,7 +332,7 @@ class FileCachedLoader(Loader):
 
 
 class LiveLoader(Loader):
-    """Load live sample data.
+    """Load live sample data without caching.
     """
 
     multipliers = None
