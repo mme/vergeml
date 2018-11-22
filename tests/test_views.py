@@ -1,8 +1,15 @@
+"""
+Tests views.
+"""
+
+import random
+import itertools
+
 from vergeml.views import IteratorView
 from vergeml.loader import LiveLoader
 from vergeml.io import SourcePlugin, source, Sample
-import random
-import itertools
+
+# pylint: disable=C0111
 
 # IteratorView
 
@@ -14,18 +21,21 @@ def test_iterview_default():
 def test_iterview_infinite():
     loader = LiveLoader('.cache', SourceTest())
     iterview = IteratorView(loader, 'train', infinite=True)
-    assert list(map(lambda tp: tp[0], itertools.islice(iterview, 150))) == list(range(100)) + list(range(50))
+    assert list(map(lambda tp: tp[0], itertools.islice(iterview, 150))) \
+        == list(range(100)) + list(range(50))
 
 
 def test_iterview_random():
     loader = LiveLoader('.cache', SourceTest())
     iterview = IteratorView(loader, 'train', randomize=True, fetch_size=1)
-    assert list(map(lambda tp: tp[0], itertools.islice(iterview, 10))) == [92, 1, 43, 61, 35, 73, 48, 18, 98, 36]
+    assert list(map(lambda tp: tp[0], itertools.islice(iterview, 10))) \
+        == [92, 1, 43, 61, 35, 73, 48, 18, 98, 36]
 
 def test_iterview_random_fetch_size():
     loader = LiveLoader('.cache', SourceTest())
     iterview = IteratorView(loader, 'train', randomize=True, fetch_size=10)
-    assert list(map(lambda tp: tp[0], itertools.islice(iterview, 10))) == list(range(70, 80))
+    assert list(map(lambda tp: tp[0], itertools.islice(iterview, 10))) \
+        == list(range(70, 80))
 
 def test_iterview_transform():
     loader = LiveLoader('.cache', SourceTest())
@@ -62,16 +72,16 @@ def test_iterview_random2():
         != list(map(lambda tp: tp[0], itertools.islice(iterview, 10)))
 
 
-@source('test-source', 'A test source.')
+@source('test-source', 'A test source.') # pylint: disable=W0223
 class SourceTest(SourcePlugin):
 
-    def __init__(self, args: dict={}):
+    def __init__(self, args=None):
         self.data = dict(
-            train = list(range(100)),
-            val = list(range(10)),
-            test = list(range(20))
+            train=list(range(100)),
+            val=list(range(10)),
+            test=list(range(20))
         )
-        super().__init__(args)
+        super().__init__(args or {})
 
     def num_samples(self, split: str) -> int:
         return len(self.data[split])
@@ -79,4 +89,4 @@ class SourceTest(SourcePlugin):
     def read_samples(self, split, index, n=1):
         items = self.data[split][index: index+n]
         return [Sample(item, item+5, {'meta': item}, random.Random(self.random_seed + item))
-            for item in items]
+                for item in items]
