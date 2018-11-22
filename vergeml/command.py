@@ -1,56 +1,67 @@
-from vergeml.plugins import PLUGINS
-import inspect 
+"""Classes and functions to define commands.
+"""
+
+import inspect
 import getopt
+
+from copy import deepcopy
+
+from vergeml.plugins import PLUGINS
 from vergeml.utils import did_you_mean, VergeMLError, parse_ai_names
 from vergeml.option import Option
-from copy import deepcopy
+
 
 _CMD_META_KEY = '__vergeml_command__'
 
-def command(name=None, descr=None, long_descr=None, examples=None, free_form=False, kind='command'):
+def command(name=None, # pylint: disable=R0913
+            descr=None,
+            long_descr=None,
+            examples=None,
+            free_form=False,
+            kind='command'):
     """Define a model command.
 
     :param name:        An optional name of the command. Defaults to the name of the function.
     :param descr:       A short description of the command
     :param long_descr:  A long description
     :param examples:    Usage examples
-    :param free_form:   When true, only the @AI parameters are parsed- the rest of the arguments 
+    :param free_form:   When true, only the @AI parameters are parsed- the rest of the arguments
                         are passed as array.
     """
-    def decorator(o):
-        assert(getattr(o, _CMD_META_KEY, None) is None)
-        _name = name or getattr(o, '__name__', None)
-        options = list(reversed(Option.discover(o)))
-        cmd = Command(_name, 
-                      descr=descr, 
-                      long_descr=long_descr, 
-                      examples=examples, 
+    def decorator(obj):
+        assert getattr(obj, _CMD_META_KEY, None) is None
+        _name = name or getattr(obj, '__name__', None)
+        options = list(reversed(Option.discover(obj)))
+        cmd = Command(_name,
+                      descr=descr,
+                      long_descr=long_descr,
+                      examples=examples,
                       options=options,
                       free_form=free_form,
                       kind=kind)
-        setattr(o, _CMD_META_KEY, cmd)
-        return o
+        setattr(obj, _CMD_META_KEY, cmd)
+        return obj
     return decorator
 
 def train(name=None, descr=None, long_descr=None, examples=None, free_form=False):
     """Define a training command.
 
     See `command` for parameter documentation."""
-    return command(name=name, descr=descr, long_descr=long_descr, examples=examples, 
+    return command(name=name, descr=descr, long_descr=long_descr, examples=examples,
                    free_form=free_form, kind='train')
 
 def predict(name=None, descr=None, long_descr=None, examples=None, free_form=False):
     """Define a prediction command.
 
     See `command` for parameter documentation."""
-    return command(name=name, descr=descr, long_descr=long_descr, examples=examples, 
+    return command(name=name, descr=descr, long_descr=long_descr, examples=examples,
                    free_form=free_form, kind='predict')
 
 class Command:
     """A command can be called directly from the command line.
        It is either a vergeml.cmd plugin or a model command."""
 
-    def __init__(self, name, descr=None, long_descr=None, examples=None, free_form=False, 
+    def __init__(self, name, descr=None, long_descr=None, examples=None, free_form=False,
                  kind='command', options=None, plugins=PLUGINS):
         """Construct a command.
 
@@ -72,7 +83,7 @@ class Command:
             assert ai_param.type in (None, 'AI', 'Optional[AI]', 'List[AI]', list, str)
         arg_param = list(filter(lambda o: o.is_argument_option(), options))
         assert len(arg_param) <= 1, "Can only have one argument parameter."
-    
+
 
     @staticmethod
     def discover(o, plugins=PLUGINS):
@@ -84,14 +95,14 @@ class Command:
             for option in res.options:
                 option.plugins = plugins
         return res
-    
+
 
     @staticmethod
     def find_functions(o, plugins=PLUGINS):
         """Find all functions of an object or class that define a command."""
         # get all functions defined by the model
         fns = [m[1] for m in inspect.getmembers(o) if not m[0].startswith("_") and callable(m[1])]
-        
+
         # sort by the order defined in code
         fns = list(sorted(fns, key=lambda f: f.__code__.co_firstlineno))
 
@@ -100,18 +111,18 @@ class Command:
 
         return list(fns)
 
-        
+
     def usage(self, short=False, parent_command=None):
         """Get the command usage.
-        
+
         :param short: Return a short version of the command usage."""
         if self.long_descr and not short:
             result = self.long_descr.strip() + "\n\n"
         else:
             result = ""
-    
+
         result += "Usage:\n"
-        
+
         ai_option = None
         argument_option = None
         subcommand_option = None
@@ -129,7 +140,7 @@ class Command:
                 optional.append(option)
             else:
                 mandatory.append(option)
-        
+
         result += f"  ml"
 
         if ai_option:
@@ -139,21 +150,21 @@ class Command:
                 result += f" [{ai_option.name}]"
             else:
                 result += f" {ai_option.name}"
-        
+
         if parent_command:
             result += f" {parent_command}:{self.name}"
         else:
             result += f" {self.name}"
         if subcommand_option:
             result += f":{subcommand_option.name}"
-        
+
         if mandatory:
             val = " ".join(map(lambda o: f"--{o.name}=<{o.name}>", mandatory))
             result += f" {val}"
-        
+
         if optional:
             result += " [options]"
-        
+
         if argument_option:
             str_list = isinstance(argument_option.type, str) and argument_option.type.startswith("List")
             list_type = hasattr(argument_option.type, '__origin__') and argument_option.type.__origin__ == list
@@ -163,7 +174,7 @@ class Command:
                 result += f" [{argument_option.name}]"
             else:
                 result += f" {argument_option.name}"
-        
+
         options = []
         if ai_option:
             if ai_option.type in (list, 'List[AI]'):
@@ -204,7 +215,7 @@ class Command:
                     result += k + str(space * ' ') + v
                 else:
                     result += k
-        
+
         if subcommand_option:
             plugins = self.plugins.all(subcommand_option.subcommand)
             max_name = max(map(len, plugins.keys())) if plugins.keys() else 0
@@ -225,9 +236,9 @@ class Command:
         if self.examples and not short:
             result += "\n\nExamples:\n"
             result += "\n".join(map(lambda l: "  " + l, self.examples.splitlines()))
-            
+
         return result
-    
+
     def _invalid_arguments(self, message=None, help_topic=None):
         message = message or "Invalid arguments."
         raise VergeMLError(message, help_topic=help_topic)
@@ -251,7 +262,7 @@ class Command:
             plugin = self.plugins.get(subcommand_param.subcommand, subcommand)
             if not plugin:
                 raise VergeMLError(f"Invalid {subcommand_param.name}.", help_topic=self.name)
-            
+
             cmd = Command.discover(plugin)
             try:
                 res = cmd.parse(argv, env_options)
@@ -266,7 +277,7 @@ class Command:
 
         # AI params
         ai_param = next((filter(lambda o: o.is_ai_option(), self.options)), None)
-        
+
         if ai_param:
             if ai_param.type in ('AI', None, str):
                 ai_conf = 'required'
@@ -276,13 +287,13 @@ class Command:
                 ai_conf = 'list'
         else:
             ai_conf = 'none'
-        
+
 
         if (ai_conf == 'optional' and len(ai_names) > 1) or \
            (ai_conf == 'required' and len(ai_names) != 1) or \
            (ai_conf == 'none' and len(ai_names) != 0):
             raise self._invalid_arguments(help_topic=self.name)
-        
+
         if ai_conf in ('required', 'optional'):
             res[ai_param.name] = next(iter(ai_names), None)
         elif ai_conf == 'list':
@@ -300,7 +311,7 @@ class Command:
 
         longopts = []
         shortopts = ""
-        
+
         for opt in self.options:
             if opt.is_ai_option() or opt.is_argument_option():
                 continue
@@ -311,9 +322,9 @@ class Command:
                 longopts.append(opt.name)
             else:
                 longopts.append(opt.name + "=")
-            
+
             if opt.short:
-                
+
                 letter = opt.short
                 assert letter not in shortopts
 
@@ -321,7 +332,7 @@ class Command:
                     shortopts += letter
                 else:
                     shortopts += letter + ":"
-            
+
         try:
             args, extra = getopt.getopt(rest, shortopts, longopts)
         except getopt.GetoptError as err:
@@ -332,15 +343,15 @@ class Command:
                 raise VergeMLError(f"Invalid option {dashes}{err.opt}", suggestion, help_topic=self.name)
             else:
                 raise VergeMLError(f"Invalid option.", help_topic=self.name)
-        
-        
+
+
         shorts_dict = {}
         longs_dict = {}
         for k, v in args:
             if k.startswith("--"):
                 longs_dict[k.lstrip("-")] = v
             else:
-                shorts_dict[k.lstrip("-")] = v    
+                shorts_dict[k.lstrip("-")] = v
 
         extra_param = next((filter(lambda o: o.is_argument_option(), self.options)), None)
 
@@ -361,10 +372,10 @@ class Command:
         if (extra_conf == 'optional' and len(extra) > 1) or \
             (extra_conf == 'none' and len(extra) != 0):
             raise self._invalid_arguments(help_topic=self.name)
-        
+
         elif extra_conf == 'required' and len(extra) == 0:
             raise self._invalid_arguments(f"Missing argument {extra_param.name}.", help_topic=self.name)
-        
+
         elif extra_conf == 'required' and len(extra) > 1:
             raise self._invalid_arguments(f"Invalid arguments.", help_topic=self.name)
 
@@ -376,7 +387,7 @@ class Command:
         for opt in self.options:
             if opt.is_ai_option() or opt.is_argument_option():
                 continue
-            
+
             value = None
             if opt.flag:
                 if opt.name in longs_dict:
@@ -391,7 +402,7 @@ class Command:
                         value = True
                     else:
                         value = shorts_dict[letter]
-            
+
             if value is None and opt.name in env_options:
                 value = env_options[opt.name]
 
@@ -402,12 +413,12 @@ class Command:
                     value = opt.cast_value(value)
                     value = opt.transform_value(value)
                     opt.validate_value(value)
-                
+
                     res[opt.name] = value
                 except VergeMLError as err:
                     err.message = f"Invalid value for option --{opt.name}."
                     raise err
-        
+
         return res
 
 
@@ -422,6 +433,6 @@ class CommandPlugin:
         cmd = Command.discover(self)
         assert(cmd)
         cmd.name = name
-    
+
     def __call__(self, argv, env):
         raise NotImplementedError
