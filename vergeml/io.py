@@ -53,19 +53,19 @@ class SourcePlugin:
 
     [1] val_perc and test_perc are set to 10 only when the corresponding _dir and _val values are not set.
 
-    [2] val-split and test-split are interpreted as follows: if the value ends with a percentage sign, 
-        the corresponding _perc value is set. if the value is numeric, it will set up the corresponding _num value. 
+    [2] val-split and test-split are interpreted as follows: if the value ends with a percentage sign,
+        the corresponding _perc value is set. if the value is numeric, it will set up the corresponding _num value.
         Otherwise, it is interpreted as a path.
 
         For example:
         val-split=10% - sets val_perc to 10
         val-split=100 - sets val_num to 100
         val-split=/data/imgs - sets val_dir to '/data/imgs'
-    
+
     [3] input-patterns is available to be set in YAML file when the SourcePlugin subclass defines input_patterns
         via @source
     """
-    
+
 
     def __init__(self, args: dict={}):
         self.meta = {}
@@ -91,7 +91,7 @@ class SourcePlugin:
         self.test_dir = splval if spltype == 'dir' else None
         self.test_num = splval if spltype == 'num' else None
         self.test_perc = splval if spltype == 'perc' else None
-            
+
     def begin_read_samples(self):
         """Called when the system starts reading samples"""
 
@@ -109,7 +109,7 @@ class SourcePlugin:
         The job of this method is to find the sample represented by the split and
         index and return the sample."""
         raise NotImplementedError
-    
+
     def read_raw_samples(self, split: str, index: int, n: int=1) -> tuple:
         """Read raw sample data.
 
@@ -117,26 +117,26 @@ class SourcePlugin:
         e.g. image bytes
         """
         return self.read_samples(split, index, n)
-    
+
     def recover_raw_sample(self, sample) -> Sample:
         """Recover a sample from raw sample data.
 
         Used for caching. Recover the value from read_raw_samples
         """
         return sample
-        
+
     def end_read_samples(self):
         """Called when the system is done reading samples.
 
         NOTE: Under some circumstances this method is never called, for example when the source
         is used with infinite iterators or when an iterator is not consumed until the end.
-        
+
         TODO: is this still true?"""
 
     def transform(self, sample):
         """Return the sample with x and y transformed to its final form."""
         raise NotImplementedError
-    
+
     def output_shape(self):
         """Return the output shape after transform or None"""
         return None
@@ -148,17 +148,17 @@ class SourcePlugin:
 
         This function must be overridden to generate a meaningful hash for the current
         set of input samples."""
-       
+
         newstate = io.BytesIO(state.encode('utf-8'))
 
-        for k in ('input_patterns', 'samples_dir', 'val_dir', 'val_num', 'val_perc', 
+        for k in ('input_patterns', 'samples_dir', 'val_dir', 'val_num', 'val_perc',
                   'test_dir', 'test_num', 'test_perc', 'random_seed'):
             newstate.write(str(getattr(self, k)).encode('utf-8'))
-        
+
         md5 = hashlib.md5()
         md5.update(newstate.getvalue())
         return md5.hexdigest()
-    
+
     def split(self, num_samples: int):
         """Split the dataset in train, val and test sets by percentage or absolute count.
 
@@ -192,7 +192,7 @@ class SourcePlugin:
         indices = rng.sample(range(num_samples), num_samples)
         val, test, train = indices[:val_num], indices[val_num:val_num + test_num], indices[val_num + test_num:]
         return train, val, test
-    
+
     def scan(self, path, exclude=[]) -> List[str]:
         """Scan path for matching files.
 
@@ -207,7 +207,7 @@ class SourcePlugin:
             res.extend(glob.glob(path + os.sep + pat, recursive=True))
 
         res = list(filter(lambda p: os.path.isfile(p), res))
-        
+
         if exclude:
             def excluded(path):
                 for e in exclude:
@@ -218,10 +218,10 @@ class SourcePlugin:
             res = list(filter(lambda p: not excluded(p), res))
 
         return sorted(res)
-    
+
     def scan_dirs(self) -> Tuple[List[str], List[str], List[str]]:
         """Scan directories for matching files.
-        
+
         :return: a tuple of files in samples_dir, val_dir, test_dir matching input_patterns
         """
         exclude = list(filter(None, (self.val_dir, self.test_dir)))
@@ -229,7 +229,7 @@ class SourcePlugin:
         val = self.scan(self.val_dir) if self.val_dir else []
         test = self.scan(self.test_dir) if self.test_dir else []
         return train, val, test
-    
+
     def normalize_filename(self, split, filename):
         """Return the filename without the parent samples directory
         """
@@ -240,8 +240,8 @@ class SourcePlugin:
             directory = self.test_dir
 
         return filename[len(directory):].strip(os.sep)
-        
-    
+
+
     def scan_and_split_files(self, files = None):
         """Return a dictionary of train, val and test files.
         """
@@ -250,7 +250,7 @@ class SourcePlugin:
 
         def fromidx(idx):
             return [train_files[i] for i in idx]
-        
+
         strain, sval, stest = self.split(len(train_files))
 
         def makemeta(split):
@@ -267,7 +267,7 @@ class SourcePlugin:
             train=list(zip(train, train_meta)),
             val=list(zip(val, val_meta)),
             test=list(zip(test, test_meta)))
-    
+
     def hash_files(self, files):
         """A default implementation for hash based on files
         """
@@ -278,20 +278,20 @@ class SourcePlugin:
                 for path, _ in files:
                     fstate = "{}{}{}{}".format(split, path, os.path.getmtime(path), os.path.getsize(path))
                     self._cached_file_state.write(fstate.encode('utf-8'))
-        
+
         return self._cached_file_state.getvalue().decode("utf-8")
-    
+
     def options(self):
         return Option.discover(self)
-    
 
-    def _configuration(self):
+
+    def configuration(self):
         """Return the configuration of the Source instance.
 
         Used for calculating the hash value when caching.
         """
         return self.args
-    
+
     def supports_preview(self):
         return False
 
@@ -339,17 +339,17 @@ def source(name, descr=None, long_descr=None, input_patterns=None):
         # if getattr(o, _SOURCE_META_KEY, None):
         #     print(getattr(o, _SOURCE_META_KEY, None).name, name)
         # assert getattr(o, _SOURCE_META_KEY, None) is None
-        
+
         options = Option.discover(o)
         if input_patterns:
             assert isinstance(input_patterns, (str, list))
-            input_patterns_option = Option('input-patterns', input_patterns, type='Union[str, List[str]]', 
+            input_patterns_option = Option('input-patterns', input_patterns, type='Union[str, List[str]]',
                                             descr="Controls which files are loaded.",
                                             transform=lambda v: v if isinstance(v, list) else v.split(","))
             options.append(input_patterns_option)
 
-        cmd = Source(name, 
-                    descr=descr, 
+        cmd = Source(name,
+                    descr=descr,
                     long_descr=long_descr,
                     options=options)
         setattr(o, _SOURCE_META_KEY, cmd)
