@@ -127,7 +127,6 @@ class Data:
              infinite:bool=False,
              with_meta:bool=False,
              randomize:bool=False,
-             max_samples:Optional[int]=None,
              transform_x:Callable[[Any], Any]=lambda x: x,
              transform_y:Callable[[Any], Any]=lambda y: y):
 
@@ -183,9 +182,6 @@ class Data:
 
         :param randomize: If True, the data will be returned in random order.
 
-        :param max_samples: The maximum amount of samples to return.
-                      Default is None (return all samples).
-
         :param transform_x: a function that takes x as an argument and returns a transformed version.
                             Defaults to None (No transformation)
 
@@ -201,8 +197,6 @@ class Data:
             self.loader.begin_read_samples()
 
             num_samples = self.loader.num_samples(split)
-            if max_samples is not None:
-                num_samples = min(num_samples, max_samples)
 
             for sample in self.loader.read_samples(split, 0, num_samples):
                 x, y, m = sample.x, sample.y, sample.meta
@@ -230,7 +224,6 @@ class Data:
                             randomize,
                             self.random_seed,
                             fetch_size,
-                            max_samples,
                             transform_x,
                             transform_y)
 
@@ -244,7 +237,6 @@ class Data:
                              infinite,
                              with_meta,
                              layout,
-                             max_samples,
                              transform_x,
                              transform_y)
 
@@ -256,7 +248,6 @@ class Data:
                                 fetch_size,
                                 infinite,
                                 with_meta,
-                                max_samples,
                                 transform_x,
                                 transform_y)
 

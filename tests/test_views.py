@@ -35,11 +35,6 @@ def test_listview_slice4():
     listview = ListView(loader, 'val')
     assert list(map(lambda tp: tp[0], listview[1:3])) == [1, 2]
 
-def test_listview_max_samples():
-    loader = LiveLoader('.cache', SourceTest())
-    listview = ListView(loader, 'train', max_samples=10)
-    assert list(map(lambda tp: tp[0], listview)) == list(range(10))
-
 def test_listview_random():
     loader = LiveLoader('.cache', SourceTest())
     listview = ListView(loader, 'train', randomize=True, fetch_size=1)
@@ -90,12 +85,6 @@ def test_iterview_default():
     loader = LiveLoader('.cache', SourceTest())
     iterview = IteratorView(loader, 'train')
     assert list(map(lambda tp: tp[0], iterview)) == list(range(100))
-
-def test_iterview_max_samples():
-    loader = LiveLoader('.cache', SourceTest())
-    iterview = IteratorView(loader, 'train', max_samples=10)
-    assert list(map(lambda tp: tp[0], iterview)) == list(range(10))
-
 
 def test_iterview_infinite():
     loader = LiveLoader('.cache', SourceTest())
