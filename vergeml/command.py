@@ -13,16 +13,6 @@ from vergeml.option import Option
 
 _CMD_META_KEY = '__vergeml_command__'
 
-class _CommandPluginProxy:
-    """
-    TODO
-    """
-    def __init__(self, cmd):
-        self.cmd = cmd
-
-    def __getattr__(self, name):
-        import ipdb; ipdb.set_trace()  # breakpoint 24830fec //
-
 
 def command(name=None, # pylint: disable=R0913
             descr=None,
