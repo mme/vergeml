@@ -28,7 +28,7 @@ _DEFAULT_STATS = [dict(name='acc', title='Accuracy', category="TRAINING", format
                   dict(name='test_loss', title='Loss', category="TESTING", format='.4f', smooth=False, log=False),]
 
 class Environment:
-    
+
     def __init__(self,
                  model=None,
                  project_file=None,
@@ -56,7 +56,7 @@ class Environment:
         :param trainings_dir:   The directory to save training results to. [default: trainings]
         :param project_dir:     The directory of the project. [default: current directory]
         :param AI:              Optional name of a trained AI.
-        :is_global_instance:    If true, this env can be accessed under the global var env.ENV. [default: false] 
+        :is_global_instance:    If true, this env can be accessed under the global var env.ENV. [default: false]
         :config:                Additional configuration to pass to env, i.e. if not using a project file
         """
 
@@ -64,7 +64,7 @@ class Environment:
 
         # when called from the command line, we need to have a global instance
         if is_global_instance:
-            global ENV
+            global ENV # pylint: disable=W0603
             ENV = self
 
         # setup the display
@@ -81,7 +81,7 @@ class Environment:
         self._data = None
 
         self.plugins = plugins
-        
+
         # set up the base options from constructor arguments
         self._config = {}
         self._config['samples-dir'] = samples_dir
@@ -116,7 +116,7 @@ class Environment:
             peek_model_name = data_doc.get('model', peek_model_name)
             # finally, if we have a model name, set up validators
             if peek_model_name:
-                for fn in Command.find_functions(plugins.get("vergeml.model", peek_model_name), 
+                for fn in Command.find_functions(plugins.get("vergeml.model", peek_model_name),
                                                  plugins=plugins):
                     cmd = Command.discover(fn)
                     validators[cmd.name] = ValidateOptions(cmd.options, cmd.name, plugins)
@@ -128,7 +128,7 @@ class Environment:
         validators['device'] = ValidateDevice('device', plugins)
         validators['data'] = ValidateData('data', plugins)
 
-       
+
         # merge project file
         if project_file:
             doc = _load_and_configure(project_file, 'project file', validators)
@@ -138,7 +138,7 @@ class Environment:
                 if not k in self._config or self._config[k] is None:
                     self._config[k] = v
 
-        # after the project file is loaded, fill missing values    
+        # after the project file is loaded, fill missing values
         project_dir = project_dir or ''
         defaults = {
             'samples-dir': os.path.join(project_dir, "samples"),
@@ -162,7 +162,7 @@ class Environment:
                                        f"Please set {split} to a percentage, number or directory.",
                                         hint_key=split, hint_type='value', help_topic='split')
                 self._config[split] = path
-        
+
         # need to have data_file variable in outer scope for later when reporting errors
         data_file = None
         if self.AI:
@@ -178,7 +178,7 @@ class Environment:
             self._config['results'] = doc.get('results', {})
             self._config['model'] = doc.get('model')
             self.results = _Results(self, data_file)
-        
+
         try:
             # merge device and data config
             self._config.update(apply_config(config, validators))
@@ -220,12 +220,12 @@ class Environment:
             else:
                 # instantiate the model plugin
                 self.model = self.model(modelname, plugins)
-        
+
         # update env from validators
         for _, plugin in validators.items():
             for k, v in plugin.values.items():
                 self._config[k] = v
-        
+
         # always set up numpy and python
         self.configure('python')
         self.configure('numpy')
@@ -282,7 +282,7 @@ class Environment:
         except FileExistsError:
             pass
         return stats_dir
-    
+
     def cache_dir(self):
         """Return the cache directory (create if it does not exist)
         """
@@ -294,8 +294,8 @@ class Environment:
         return cache_dir
 
     # save_max, min needed?
-    def start_training(self, 
-                       name=None, 
+    def start_training(self,
+                       name=None,
                        hyperparameters={}):
         """Start a training session.
 
@@ -304,7 +304,7 @@ class Environment:
         """
         created = datetime.datetime.now()
         self.AI = name or random_robot_name(created, self._config['trainings-dir'])
-        
+
         self.display.print("Creating @{} ...".format(self.AI))
         robot = ascii_robot(created, self.AI)
         if "VERGEML_FUNKY_ROBOTS" in os.environ:
@@ -313,7 +313,7 @@ class Environment:
             self.display.print("")
         else:
             self.display.print("")
-        
+
         results = {'created_at': time.mktime(created.timetuple())}
         if self.get('data.input.type'):
             results['num_samples'] = self.data.num_samples('train')
@@ -323,7 +323,7 @@ class Environment:
         self.set('results', results)
 
         data_file = os.path.join(self.AI_dir(), "data.yaml")
-        
+
         self.results = _Results(self, data_file)
         # results will do the rest. As results periodically updates data.yaml,
         # it will save hyperparameters too
@@ -333,7 +333,7 @@ class Environment:
         stats_file = os.path.join(self.stats_dir(), "stats.csv")
         self.training = Training(self, stats_file)
         return self.AI
-    
+
     def end_training(self, final_results={}):
         """End a training session.
 
@@ -348,7 +348,7 @@ class Environment:
         self.training.update(write_stats=False, **final_results)
         self.training.end()
         self.training = None
-    
+
     def cancel_training(self, final_results={}):
         """Cancel a training session.
         """
@@ -365,7 +365,7 @@ class Environment:
         if not self._data:
             self._data = Data(self, plugins=self.plugins)
         return self._data
-    
+
     def configure(self, *libraries):
         """Configure various libraries by setting up random seeds etc.
 
@@ -383,7 +383,7 @@ class Environment:
                 PythonInterpreter.setup(self)
             elif library == 'torch':
                 TorchLibrary.setup(self)
-    
+
     def progress_callback(self,
                           epochs=None,
                           steps=None,
@@ -395,7 +395,7 @@ class Environment:
         assert display_progress in ('epochs', 'steps', 'epochs-steps', None)
         stats = deepcopy(stats)
         return self.training.callback(epochs, steps, display_progress, stats)
-    
+
     def keras_callback(self,
                        display_progress='epochs-steps',
                        stats=_DEFAULT_STATS):
@@ -403,12 +403,12 @@ class Environment:
         """
         assert self.training, "Must call start_training() before calling keras_callback()"
         return KerasLibrary.callback(self, display_progress, stats)
-    
+
     def tensorflow_session(self):
         """Create a new tensorflow session as configured in the environment.
         """
         return TensorFlowLibrary.create_session(self)
-    
+
     def args_for(self, fn, args):
         """A utility function to return only the args which can be passed to function fn.
 
@@ -436,20 +436,20 @@ class Environment:
             elif param in methods:
                 res[param] = methods[param]()
         return res
-    
+
     def set_defaults(self, cmd, args, plugins=PLUGINS):
         if self.model:
             self.model.set_defaults(cmd, args, self)
         validators = dict(device=ValidateDevice('device', plugins),
                             data=ValidateData('data', plugins))
-        
+
         config = dict(device=self.get('device'), data=self.get('data'))
         apply_config(config, validators)
         # update env from validators
         for _, plugin in validators.items():
             for k, v in plugin.values.items():
                 self._config[k] = v
-            
+
 
 
 def _load_and_configure(file, label, validators):
@@ -457,8 +457,8 @@ def _load_and_configure(file, label, validators):
     try:
         doc = apply_config(doc, validators)
         if 'random-seed' in doc and not isinstance(doc['random-seed'], int):
-            raise VergeMLError('Invalid value option random-seed.', 
-                               'random-seed must be an integer value.', 
+            raise VergeMLError('Invalid value option random-seed.',
+                               'random-seed must be an integer value.',
                                hint_type='value',
                                hint_key='random-seed')
     except VergeMLError as e:
@@ -492,15 +492,15 @@ class _Results:
         self.path = path
         self.env = env
         self.last_sync = None
-    
+
     def add(self, data):
         for k, v in data.items():
             self.env.set('results.' + k, v)
         self._sync()
-        
+
     def flush(self):
         self._sync(force=True)
-    
+
     def _sync(self, force=False):
         now = datetime.datetime.now()
         if force or not self.last_sync or (now - self.last_sync).total_seconds() > _SYNC_INTV:
@@ -510,7 +510,7 @@ class _Results:
                         results=self._convert(self.env.get('results')))
             with open(self.path, "w") as f:
                 yaml.dump(data, f)
-    
+
     def _convert(self, vals):
         res = {}
         for k, v in vals.items():
@@ -528,7 +528,7 @@ class _Results:
         return res
 
 class Training:
-    
+
     def __init__(self, env, stats_file):
         self.env = env
         self.steps = None
@@ -577,18 +577,18 @@ class Training:
 
         if not self.did_start:
             if self.display_progress is not None:
-                self.training_feedback = TrainingFeedback(epochs=self.epochs, 
-                                                          steps=self.steps, 
-                                                          display_progress=self.display_progress, 
-                                                          stats=self.stats, 
+                self.training_feedback = TrainingFeedback(epochs=self.epochs,
+                                                          steps=self.steps,
+                                                          display_progress=self.display_progress,
+                                                          stats=self.stats,
                                                           display=self.env.display)
                 self.training_feedback.start()
             self.did_start = True
-        
+
         smooth_stats = deepcopy(stats)
         if stats:
             smooth = [stat['name'] for stat in self.stats if stat['smooth']]
-            
+
             if step is not None:
                 for k, v in stats.items():
 
@@ -598,13 +598,13 @@ class Training:
                         if len(self._avg[k]) > 10:
                             self._avg[k] = self._avg[k][-10:]
                         v = sum(self._avg[k]) / len(self._avg[k])
-                    
+
                     smooth_stats[k] = v
             if write_stats:
                 self.stats_writer.write(epoch, step, stats)
             self.training_feedback.update(epoch=epoch, step=step, **smooth_stats)
-            
-    
+
+
     def end(self):
         if self.did_start:
             self.training_feedback.stop()
@@ -615,7 +615,7 @@ def _toscalar(v):
     if isinstance(v, (np.float16, np.float32, np.float64,
                       np.uint8, np.uint16, np.uint32, np.uint64,
                       np.int8, np.int16, np.int32, np.int64)):
-        return np.asscalar(v)    
+        return np.asscalar(v)
     else:
         return v
 
@@ -624,7 +624,7 @@ class _StatsWriter:
     def __init__(self, stats, stats_file):
         self.ks = [k['name'] for k in stats if k['log']]
         self.prev = {}
-        
+
         if not self.ks:
             return
 

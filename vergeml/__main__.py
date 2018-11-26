@@ -22,7 +22,7 @@ def _parsebase(argv, plugins=PLUGINS):
     shortopts = 'vf:m:' # version, file, model
     longopts = ['version', 'file=', 'model=', 'samples-dir=', 'test-split=', 'val-split=', 'cache-dir=', 'random-seed=',
                 'trainings-dir=', 'project-dir=']
-    
+
     # configs = [ValidateDevice(plugins), ValidateData(plugins)]
     configopts = [('device-memory', 'device.memory'), ('device', 'device'), ('cache', 'data.cache')]
     # for cnf in configs:
@@ -44,13 +44,13 @@ def _parsebase(argv, plugins=PLUGINS):
                 raise getopt.GetoptError('Invalid key', opt='--' + keys[0])
             else:
                 raise getopt.GetoptError('Invalid key')
-    
-    
+
+
     for s, l in (('-v', '--version'), ('-m', '--model'), ('-f', '--file')):
         if s in args:
             args[l] = args[s]
             del args[s]
-    
+
     # partition into base and config options
     base_args, config_args = {}, {}
     longopts_ = list(map(lambda o: o.rstrip("="), longopts))
@@ -78,7 +78,7 @@ def _env_from_args(args, config, AI, plugins=PLUGINS):
 
     if AI:
         args['AI'] = AI
-    
+
     args['config'] = config
     args['is_global_instance'] = True
     args['plugins'] = plugins
@@ -97,17 +97,17 @@ def _prepare_args(args):
         default_file = os.path.join(project_dir, "vergeml.yaml")
         if os.path.exists(default_file):
             args['file'] = default_file
-    
+
     if 'file' in args:
         args['project-file'] = args['file']
         del args['file']
-    
+
     if 'random-seed' in args:
         try:
             args['random-seed'] = int(args['random-seed'])
         except ValueError:
-            raise VergeMLError("Invalid value for --random-seed.", 
-                               "--random-seed must be an integer value.", 
+            raise VergeMLError("Invalid value for --random-seed.",
+                               "--random-seed must be an integer value.",
                                ('value', 'random-seed'))
 
     return args
@@ -131,7 +131,7 @@ def _forgive_wrong_option_order(argv):
                 argname = argname.split("=")[0]
             is_vergeml_opt = bool(argname in _VERGEML_OPTION_NAMES)
             lst = (first_part if is_vergeml_opt else second_part)
-            
+
             if arg.endswith("=") or not "=" in arg:
                 if not rest:
                     # give up
@@ -158,7 +158,7 @@ def run(argv, plugins=PLUGINS):
             raise VergeMLError(f"Invalid option {dashes}{opt}.", help_topic='options')
         else:
             raise VergeMLError(f"Invalid option.", help_topic='options')
-    
+
     if 'version' in args:
        print_version()
        exit()
@@ -167,12 +167,12 @@ def run(argv, plugins=PLUGINS):
     ai_names, after_names = parse_ai_names(rest)
 
     AI = next(iter(ai_names), None)
-  
+
     env = _env_from_args(args, config, AI, plugins=plugins)
 
     if after_names:
-        cmdname = after_names.pop(0) 
-    else: 
+        cmdname = after_names.pop(0)
+    else:
         cmdname = 'help'
         rest = ['help']
 
@@ -196,7 +196,7 @@ def run(argv, plugins=PLUGINS):
             model_commands = set(map(lambda f:Command.discover(f).name, Command.find_functions(env.model)))
             command_names.update(model_commands)
 
-        raise VergeMLError(f"Invalid command '{cmdname}'.",  
+        raise VergeMLError(f"Invalid command '{cmdname}'.",
                            suggestion=did_you_mean(command_names, cmdname),
                            help_topic='*help*')
     try:
@@ -215,14 +215,14 @@ def run(argv, plugins=PLUGINS):
                 env.set(f"{cmdname}.{k}", v)
         env.set("command", cmdname)
         env.set_defaults(cmdname, args, plugins=plugins)
-    
+
         try:
             # return the result for unit testing
             return plugin(args, env)
         finally:
             if env.training is not None:
                 env.cancel_training()
-       
+
     except KeyboardInterrupt:
         # silence the stacktrace
         pass
@@ -282,7 +282,7 @@ def main(argv=None, plugins=PLUGINS):
     _configure_logging()
     try:
         run(argv, plugins=plugins)
-    
+
     except VergeMLError as e:
         # NOTE- when the error is encountered before the environment is created, it will be empty.
         from vergeml.env import ENV
