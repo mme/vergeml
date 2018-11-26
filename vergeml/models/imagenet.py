@@ -51,6 +51,7 @@ class ImageNetModelPlugin(ModelPlugin):
                          xy_val=list(env.data.load('val', view='list', layout='arrays')),
                          xy_test=list(env.data.load('test', view='list', layout='arrays')),
                          labels=env.data.meta['labels'])
+        import ipdb; ipdb.set_trace()  # breakpoint cd228978 //
         # start training
         env.start_training(name=args['name'],
                            hyperparameters={'labels': trainargs['labels'],
@@ -200,7 +201,7 @@ class ImageNetModel:
             optimizer = optimizers.Adam(lr=learning_rate, decay=decay)
         else:
             optimizer = optimizers.SGD(lr=learning_rate, decay=decay, momentum=0.9)
-    
+
         self.trained_model.compile(loss='categorical_crossentropy',
                                    optimizer=optimizer,
                                    metrics=['accuracy'])
@@ -308,10 +309,10 @@ class ImageNetModel:
             res['test_loss'] = test_loss
             res['test_acc'] = test_acc
 
-            report = classification_report(y_true = np.argmax(y_test, axis=1), 
+            report = classification_report(y_true = np.argmax(y_test, axis=1),
                                            y_pred = np.argmax(pred_test, axis=1),
-                                           target_names=self.labels, 
-                                           digits=4, 
+                                           target_names=self.labels,
+                                           digits=4,
                                            output_dict=True)
 
             res['auc'] = roc_auc_score(y_test.astype(np.int), pred_test)
@@ -321,7 +322,7 @@ class ImageNetModel:
                 res[label+"-precision"] = stats['precision']
                 res[label+"-recall"] = stats['recall']
                 res[label+"-f1"] = stats['f1-score']
-                
+
         return pred_test, res
 
 
