@@ -13,12 +13,24 @@ from vergeml.option import Option
 
 _CMD_META_KEY = '__vergeml_command__'
 
+class _CommandPluginProxy:
+    """
+    TODO
+    """
+    def __init__(self, cmd):
+        self.cmd = cmd
+
+    def __getattr__(self, name):
+        import ipdb; ipdb.set_trace()  # breakpoint 24830fec //
+
+
 def command(name=None, # pylint: disable=R0913
             descr=None,
             long_descr=None,
             examples=None,
             free_form=False,
             kind='command'):
+
     """Define a model command.
 
     :param name:        An optional name of the command. Defaults to the name of the function.
@@ -29,8 +41,13 @@ def command(name=None, # pylint: disable=R0913
                         are passed as array.
     """
     def decorator(obj):
+        # make sure that a command is not defined more than once
         assert getattr(obj, _CMD_META_KEY, None) is None
+
+        # name defaults to the functions name
         _name = name or getattr(obj, '__name__', None)
+
+        # construct the command with options and attach it to obj
         options = list(reversed(Option.discover(obj)))
         cmd = Command(_name,
                       descr=descr,
@@ -39,8 +56,27 @@ def command(name=None, # pylint: disable=R0913
                       options=options,
                       free_form=free_form,
                       kind=kind)
-        setattr(obj, _CMD_META_KEY, cmd)
-        return obj
+
+        if kind == 'train' and inspect.isfunction(obj):
+
+            # Wrap the function
+            def _wrapper(*args):
+                *_, env = args
+
+                if env:
+                    # let the environment know the current training command
+                    env.train_command = _name
+
+                return obj(*args)
+
+            res = _wrapper
+        else:
+            res = obj
+
+        setattr(res, _CMD_META_KEY, cmd)
+
+        return res
+
     return decorator
 
 def train(name=None, descr=None, long_descr=None, examples=None, free_form=False):
