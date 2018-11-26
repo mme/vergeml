@@ -29,6 +29,17 @@ _DEFAULT_STATS = [dict(name='acc', title='Accuracy', category="TRAINING", format
 
 class Environment:
 
+    _train_command = None
+
+    @property
+    def train_command(self):
+        return self._train_command
+
+    @train_command.setter
+    def train_command(self, _train_command):
+        return self._train_command
+
+
     def __init__(self,
                  model=None,
                  project_file=None,
