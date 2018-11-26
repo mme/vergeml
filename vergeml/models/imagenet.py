@@ -51,7 +51,6 @@ class ImageNetModelPlugin(ModelPlugin):
                          xy_val=list(env.data.load('val', view='list', layout='arrays')),
                          xy_test=list(env.data.load('test', view='list', layout='arrays')),
                          labels=env.data.meta['labels'])
-        import ipdb; ipdb.set_trace()  # breakpoint cd228978 //
         # start training
         env.start_training(name=args['name'],
                            hyperparameters={'labels': trainargs['labels'],
