@@ -1,43 +1,57 @@
-from vergeml.utils import VergeMLError, did_you_mean, dict_has_path, dict_get_path, dict_set_path, \
-                   parse_split
-from vergeml.plugins import PLUGINS
-from vergeml.command import Command
-from vergeml.data import Data, Labels
-from vergeml.validate import load_yaml_file, apply_config, yaml_find_definition, display_err_in_file, \
-     ValidateOptions, ValidateData, ValidateDevice
-from vergeml.random_robot import random_robot_name, ascii_robot
-from vergeml.libraries import KerasLibrary, TensorFlowLibrary, TorchLibrary, NumPyLibrary, PythonInterpreter
-from vergeml.display import DISPLAY, TrainingFeedback
-import numpy as np
+"""Environment and related classes.
+"""
+
 import os.path
 import datetime
 import time
-import re
-import yaml
 import inspect
 import csv
 from copy import deepcopy
 
+import yaml
+import numpy as np
+
+from vergeml.utils import VergeMLError, did_you_mean, parse_split
+from vergeml.utils import dict_get_path, dict_set_path
+
+from vergeml.plugins import PLUGINS
+from vergeml.command import Command
+from vergeml.data import Data, Labels
+from vergeml.validate import load_yaml_file, apply_config, yaml_find_definition, display_err_in_file
+from vergeml.validate import ValidateOptions, ValidateData, ValidateDevice
+from vergeml.random_robot import random_robot_name, ascii_robot
+from vergeml.libraries import KerasLibrary, TensorFlowLibrary, TorchLibrary
+from vergeml.libraries import NumPyLibrary, PythonInterpreter
+from vergeml.display import DISPLAY, TrainingFeedback
+
+
 ENV = None
 
-_DEFAULT_STATS = [dict(name='acc', title='Accuracy', category="TRAINING", format='.4f', smooth=True, log=True),
-                  dict(name='loss', title='Loss', category="TRAINING", format='.4f', smooth=True, log=True),
-                  dict(name='val_acc', title='Accuracy', category="VALIDATION", format='.4f', smooth=False, log=True),
-                  dict(name='val_loss', title='Loss', category="VALIDATION", format='.4f', smooth=False, log=True),
-                  dict(name='test_acc', title='Accuracy', category="TESTING", format='.4f', smooth=False, log=False),
-                  dict(name='test_loss', title='Loss', category="TESTING", format='.4f', smooth=False, log=False),]
+_DEFAULT_STATS = [dict(name='acc', title='Accuracy', category="TRAINING", format='.4f',
+                       smooth=True, log=True),
+                  dict(name='loss', title='Loss', category="TRAINING", format='.4f',
+                       smooth=True, log=True),
+                  dict(name='val_acc', title='Accuracy', category="VALIDATION", format='.4f',
+                       smooth=False, log=True),
+                  dict(name='val_loss', title='Loss', category="VALIDATION", format='.4f',
+                       smooth=False, log=True),
+                  dict(name='test_acc', title='Accuracy', category="TESTING", format='.4f',
+                       smooth=False, log=False),
+                  dict(name='test_loss', title='Loss', category="TESTING", format='.4f',
+                       smooth=False, log=False),]
 
 class Environment:
 
-    _train_command = None
+    _current_command = None
 
     @property
-    def train_command(self):
-        return self._train_command
+    def current_command(self):
+        """The name of the currently executing command"""
+        return self._current_command
 
-    @train_command.setter
-    def train_command(self, _train_command):
-        return self._train_command
+    @current_command.setter
+    def current_command(self, current_command):
+        self._current_command = current_command
 
 
     def __init__(self,
@@ -449,6 +463,15 @@ class Environment:
         return res
 
     def set_defaults(self, cmd, args, plugins=PLUGINS):
+        # TODO This exists so that models can set up default values
+        # TODO maybe even for all commands?
+        # also, does this cause defaults to be set up multiple times?
+        # what about running predict?
+
+        # set defaults is actually called from __main__
+        # however, when running through a jupyter notebook, this will
+        # not work !
+
         if self.model:
             self.model.set_defaults(cmd, args, self)
         validators = dict(device=ValidateDevice('device', plugins),

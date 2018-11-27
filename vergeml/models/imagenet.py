@@ -51,12 +51,14 @@ class ImageNetModelPlugin(ModelPlugin):
                          xy_val=list(env.data.load('val', view='list', layout='arrays')),
                          xy_test=list(env.data.load('test', view='list', layout='arrays')),
                          labels=env.data.meta['labels'])
+
+        # set up hyperparameters
+        hyperparameters = args.copy()
+        hyperparameters.update({'labels': env.data.meta['labels'], 'size': size})
+
         # start training
         env.start_training(name=args['name'],
-                           hyperparameters={'labels': trainargs['labels'],
-                                            'size': size,
-                                            'layers': args['layers'],
-                                            'cnn': args['cnn']})
+                           hyperparameters=hyperparameters)
 
         trainargs.update(env.args_for(self.model.train, args))
         trainargs['callbacks'] = [env.keras_callback()]

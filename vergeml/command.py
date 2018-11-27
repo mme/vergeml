@@ -1,6 +1,5 @@
 """Classes and functions to define commands.
 """
-
 import inspect
 import getopt
 
@@ -12,6 +11,50 @@ from vergeml.option import Option
 
 
 _CMD_META_KEY = '__vergeml_command__'
+
+
+class _CommandCallProxy:
+    """Proxy calling commands to setup the environment.
+    """
+
+    def __init__(self, name, obj):
+        self.__name__ = name
+        self.__wrapped_obj__ = obj
+
+    def __call__(self, args, env):
+        env.current_command = self.__name__
+        return self.__wrapped_obj__(args, env)
+
+    def __getattr__(self, name):
+        if name in ('__wrapped_obj__', '__name__'):
+            raise AttributeError()
+
+        return getattr(self.__wrapped_obj__, name)
+
+    def __setattr__(self, name, value):
+        if name in ('__wrapped_obj__', '__name__'):
+            self.__dict__[name] = value
+        else:
+            setattr(self.__wrapped_obj__, name, value)
+
+    @staticmethod
+    def function_wrapper(fun, name):
+        """Wraps a function command.
+        """
+        def _wrapper(*args):
+            *_, env = args
+            env.current_command = name
+            return fun(*args)
+        return _wrapper
+
+    @staticmethod
+    def class_wrapper(klass, name):
+        """Wraps a class command.
+        """
+        def _wrapper(*args, **kwargs):
+            return _CommandCallProxy(name, klass(*args, **kwargs))
+        return _wrapper
+
 
 
 def command(name=None, # pylint: disable=R0913
@@ -47,25 +90,15 @@ def command(name=None, # pylint: disable=R0913
                       free_form=free_form,
                       kind=kind)
 
-        if kind == 'train' and inspect.isfunction(obj):
-
-            # Wrap the function
-            def _wrapper(*args):
-                *_, env = args
-
-                if env:
-                    # let the environment know the current training command
-                    env.train_command = _name
-
-                return obj(*args)
-
-            res = _wrapper
+        if inspect.isclass(obj):
+            setattr(obj, _CMD_META_KEY, cmd)
+            _wrapper = _CommandCallProxy.class_wrapper(obj, _name)
         else:
-            res = obj
+            _wrapper = _CommandCallProxy.function_wrapper(obj, _name)
 
-        setattr(res, _CMD_META_KEY, cmd)
+        setattr(_wrapper, _CMD_META_KEY, cmd)
 
-        return res
+        return _wrapper
 
     return decorator
 
@@ -457,7 +490,7 @@ class CommandPlugin:
         from vergeml.command import Command
 
         cmd = Command.discover(self)
-        assert(cmd)
+        assert cmd
         cmd.name = name
 
     def __call__(self, argv, env):
