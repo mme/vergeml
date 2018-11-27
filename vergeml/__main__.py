@@ -214,7 +214,7 @@ def run(argv, plugins=PLUGINS):
             for k,v in args.items():
                 env.set(f"{cmdname}.{k}", v)
         env.set("command", cmdname)
-        env.set_defaults(cmdname, args, plugins=plugins)
+        # env.set_defaults(cmdname, args)
 
         try:
             # return the result for unit testing
