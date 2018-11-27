@@ -21,9 +21,25 @@ class _CommandCallProxy:
         self.__name__ = name
         self.__wrapped_obj__ = obj
 
+
+    @staticmethod
+    def _wrap_call(name, fun, args, env):
+
+        # Let the environment know about the name of the command being
+        # executed
+        env.current_command = name
+
+        # Set up defaults for the command. This will also give models a chance
+        # to alter the configuration of the environment before command
+        # execution.
+
+        env.set_defaults(name, args)
+
+        return fun(args, env)
+
     def __call__(self, args, env):
-        env.current_command = self.__name__
-        return self.__wrapped_obj__(args, env)
+        return _CommandCallProxy._wrap_call(
+            self.__name__, self.__wrapped_obj__, args, env)
 
     def __getattr__(self, name):
         if name in ('__wrapped_obj__', '__name__'):
@@ -41,10 +57,13 @@ class _CommandCallProxy:
     def function_wrapper(fun, name):
         """Wraps a function command.
         """
-        def _wrapper(*args):
-            *_, env = args
-            env.current_command = name
-            return fun(*args)
+        def _wrapper(*fn_args):
+            *self_, args, env = fn_args
+            # when we get a self argument, bind the function
+            _fun = fun.__get__(self_[0]) if self_ else fun
+
+            return _CommandCallProxy._wrap_call(name, _fun, args, env)
+
         return _wrapper
 
     @staticmethod

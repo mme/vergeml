@@ -462,7 +462,7 @@ class Environment:
                 res[param] = methods[param]()
         return res
 
-    def set_defaults(self, cmd, args, plugins=PLUGINS):
+    def set_defaults(self, cmd, args):
         # TODO This exists so that models can set up default values
         # TODO maybe even for all commands?
         # also, does this cause defaults to be set up multiple times?
@@ -474,8 +474,8 @@ class Environment:
 
         if self.model:
             self.model.set_defaults(cmd, args, self)
-        validators = dict(device=ValidateDevice('device', plugins),
-                            data=ValidateData('data', plugins))
+        validators = dict(device=ValidateDevice('device', self.plugins),
+                            data=ValidateData('data', self.plugins))
 
         config = dict(device=self.get('device'), data=self.get('data'))
         apply_config(config, validators)
