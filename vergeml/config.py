@@ -1,4 +1,4 @@
-"""Validate configuration files.
+"""Parse configuration files.
 """
 
 from copy import deepcopy
@@ -12,7 +12,7 @@ from vergeml.io import Source
 from vergeml.operation import Operation
 
 def parse_device(section, device_id=None, device_memory=None):
-    """Validate the device section of the config file.
+    """Parse the device section of the config file.
     """
     section = deepcopy(section or {})
 
@@ -106,7 +106,7 @@ def _parse_device_grow_memory(res, section):
 
 
 def parse_data(section, plugins=PLUGINS, cache=None):
-    """Validate the data section of the config file.
+    """Parse the data section of the config file.
     """
     section = deepcopy(section or {})
 
@@ -290,6 +290,27 @@ def _parse_data_preprocess(res, section, plugins):
 
             operations.append(opdict)
         res['preprocess'] = operations
+
+
+def parse_command(command, section):
+    """Parse a command in the config file.
+    """
+    res = {}
+
+    _raise_unknown_option(command.name, [o.name for o in command.options],
+                          section.keys(), command.name)
+
+    for option in command.options:
+
+        if option.name in section:
+            value = section[option.name]
+            value = option.cast_value(value)
+            value = option.transform_value(value)
+            option.validate_value(value)
+            res[option.name] = value
+
+    return res
+
 
 def _raise_unknown_option(key, valid, options, help_topic):
 
