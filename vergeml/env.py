@@ -66,7 +66,7 @@ class Environment:
                  project_dir=None,
                  AI=None,
                  is_global_instance=False,
-                 config={},
+                 config=None,
                  plugins=PLUGINS,
                  display=DISPLAY):
         """Configure, train and save the results.
@@ -81,11 +81,15 @@ class Environment:
         :param trainings_dir:   The directory to save training results to. [default: trainings]
         :param project_dir:     The directory of the project. [default: current directory]
         :param AI:              Optional name of a trained AI.
-        :is_global_instance:    If true, this env can be accessed under the global var env.ENV. [default: false]
-        :config:                Additional configuration to pass to env, i.e. if not using a project file
+        :is_global_instance:    If true, this env can be accessed under the global var env.ENV.
+                                [default: false]
+        :config:                Additional configuration to pass to env, i.e. if not using a project
+                                file.
         """
 
         super().__init__()
+
+        config = config or {}
 
         # when called from the command line, we need to have a global instance
         if is_global_instance:
@@ -94,20 +98,26 @@ class Environment:
 
         # setup the display
         self.display = display
+
+        # REVIEW this should be named trained_model
         # set the name of the AI if given
         self.AI = AI
+
+        # REVIEW this should be named model object then.
         # this holds the model object (not the name of the model)
         self.model = None
-        # the results class (responsible for updating data.yaml with the latest results during training)
+        # The results class (responsible for updating data.yaml with the latest results
+        # during training)
         self.results = None
-        # when a training is started, this holds the object responsible for coordinating the training
+        # When a training is started, this holds the object responsible for coordinating the
+        # training.
         self.training = None
-        # hold a proxy to the data loader
+        # Hold a proxy to the data loader.
         self._data = None
 
         self.plugins = plugins
 
-        # set up the base options from constructor arguments
+        # Set up the base options from constructor arguments.
         self._config = {}
         self._config['samples-dir'] = samples_dir
         self._config['test-split'] = test_split
@@ -118,10 +128,15 @@ class Environment:
         self._config['model'] = model
 
         validators = {}
-         # add validators for commands
-        for k, v in plugins.all('vergeml.cmd').items():
-            cmd = Command.discover(v)
+
+        # add validators for commands
+        # REVIEW don't validate all commands !!?!
+        for k, val in plugins.all('vergeml.cmd').items():
+            cmd = Command.discover(val)
             validators[cmd.name] = ValidateOptions(cmd.options, k, plugins=plugins)
+
+        # REVIEW again, leave out this tricky code by *not* evaluating everything.
+
         # now it gets a bit tricky - we need to peek at the model name
         # to find the right validators to create for model commands.
         peek_model_name = model
@@ -149,6 +164,9 @@ class Environment:
             # in this case we don't care if something went wrong - the error
             # will be reported later
             pass
+
+        # These validators should be the only ones!
+
         # finally, validators for device and data sections
         validators['device'] = ValidateDevice('device', plugins)
         validators['data'] = ValidateData('data', plugins)
@@ -159,9 +177,9 @@ class Environment:
             doc = _load_and_configure(project_file, 'project file', validators)
             # the project file DOES NOT override values passed to the environment
             # TODO reserved: hyperparameters and results
-            for k, v in doc.items():
+            for k, val in doc.items():
                 if not k in self._config or self._config[k] is None:
-                    self._config[k] = v
+                    self._config[k] = val
 
         # after the project file is loaded, fill missing values
         project_dir = project_dir or ''
@@ -173,6 +191,8 @@ class Environment:
             'random-seed': 2204,
             'trainings-dir': os.path.join(project_dir, "trainings"),
         }
+
+        # REVIEW: This should be a one liner.
         for k, v in defaults.items():
             if self._config[k] is None:
                 self._config[k] = v
@@ -188,8 +208,9 @@ class Environment:
                                         hint_key=split, hint_type='value', help_topic='split')
                 self._config[split] = path
 
-        # need to have data_file variable in outer scope for later when reporting errors
+        # Have the data_file variable in outer scope for later when reporting errors
         data_file = None
+
         if self.AI:
             ai_path = os.path.join(self._config['trainings-dir'], self.AI)
             if not os.path.exists(ai_path):
@@ -207,12 +228,12 @@ class Environment:
         try:
             # merge device and data config
             self._config.update(apply_config(config, validators))
-        except VergeMLError as e:
+        except VergeMLError as err:
             # improve the error message when this runs on the command line
-            if is_global_instance and e.hint_key:
-                key = e.hint_key
-                e.message = f"Option --{key}: " + e.message
-            raise e
+            if is_global_instance and err.hint_key:
+                key = err.hint_key
+                err.message = f"Option --{key}: " + err.message
+            raise err
 
         if self._config['model']:
             # load the model plugin
@@ -221,7 +242,8 @@ class Environment:
 
             if not self.model:
                 message = f"Unknown model name '{modelname}'"
-                suggestion = did_you_mean(plugins.keys('vergeml.model'), modelname) or "See 'ml help models'."
+                suggestion = (did_you_mean(plugins.keys('vergeml.model'), modelname)
+                              or "See 'ml help models'.")
 
                 # if model was passed in via --model
                 if model and is_global_instance:

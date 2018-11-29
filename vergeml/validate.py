@@ -56,17 +56,17 @@ def apply_config(raw, validators):
             candidates = [opt.name for opt in options]
             suggestion = did_you_mean(candidates, first)
             raise _invalid_option(first, help_topic=config.name, suggestion=suggestion, kind='key')
-    
+
         # validate and cast options
         for option in options:
             if dict_has_path(raw, option.name):
                 value = dict_get_path(raw, option.name)
                 dict_del_path(raw, option.name)
                 config.configure(option, value)
-    
+
     return raw
 
-        
+
 class Validate:
 
     def __init__(self, name=None, plugins=PLUGINS):
@@ -77,7 +77,7 @@ class Validate:
         for option in self._options:
             if option.alias is None:
                 dict_set_path(self._values, option.name, option.default)
-    
+
     def configure(self, option, value):
         try:
             value = option.cast_value(value)
@@ -91,7 +91,7 @@ class Validate:
                 dict_set_path(self._values, option.name, value)
         except VergeMLError as err:
             # set help topic
-            err.help_topic = self.name 
+            err.help_topic = self.name
             raise err
 
     def options(self):
@@ -114,7 +114,7 @@ class Validate:
 # default = *auto*
 
 class ValidateData(Validate):
-    
+
     def configure(self, option, value):
         if option.name == 'data.input' and 'type' in value:
             self._validate_source(value, 'input')
@@ -124,18 +124,18 @@ class ValidateData(Validate):
             self._validate_preprocess(value)
 
         super().configure(option, value)
-    
-    
+
+
     def _validate_source(self, config, source_name):
         name = config['type']
         if not name:
             return
         plugin = self.plugins.get("vergeml.io", name)
         if not plugin:
-            raise _invalid_option(f"data.{source_name}.type", 
+            raise _invalid_option(f"data.{source_name}.type",
                                   help_topic='data',
                                   suggestion=did_you_mean(self.plugins.keys('vergeml.io'), name))
-        
+
         source = Source.discover(plugin)
         options = list(filter(lambda o: o.name != 'type', source.options))
         validator = ValidateOptions(options, source_name, self.plugins)
@@ -155,29 +155,29 @@ class ValidateData(Validate):
                 values['data'][source_name] = {}
             values['data'][source_name]['type'] = name
             dict_merge(self.values, values)
-    
+
     def _validate_preprocess(self, value):
         operations = []
         for ix, config in enumerate(value):
             if not isinstance(config, dict):
                 raise VergeMLError(f"Invalid entry in preprocess - must be key value pairs.",
-                                    "Please fix the entry in the project file.", 
-                                    help_topic="preprocess", 
-                                    hint_type='key', 
+                                    "Please fix the entry in the project file.",
+                                    help_topic="preprocess",
+                                    hint_type='key',
                                     hint_key='data.preprocess.' + str(ix))
             elif not 'op' in config:
                 raise VergeMLError(f"Invalid entry in preprocess - missing 'op' key.",
-                                    "Please fix the entry in the project file.", 
-                                    help_topic="preprocess", 
-                                    hint_type='key', 
+                                    "Please fix the entry in the project file.",
+                                    help_topic="preprocess",
+                                    hint_type='key',
                                     hint_key='data.preprocess.' + str(ix))
             op_name = config['op']
             plugin = self.plugins.get("vergeml.operation", op_name)
             if not plugin:
                 raise VergeMLError(f"Invalid entry in preprocess - unknown operation '{op_name}'.",
-                                    "Please fix the entry in the project file.", 
-                                    help_topic="preprocess", 
-                                    hint_type='value', 
+                                    "Please fix the entry in the project file.",
+                                    help_topic="preprocess",
+                                    hint_type='value',
                                     hint_key="data.preprocess.{ix}.op")
 
             op = Operation.discover(plugin)
@@ -193,7 +193,7 @@ class ValidateData(Validate):
             validator.values['op'] = op_name
             operations.append(validator.values)
         dict_merge(self.values, dict(data=dict(preprocess=operations)))
-         
+
 
 def _validate_device_id(option, value):
     if not re.match(r"^(gpu:[0-9]+|gpu|cpu|auto)", value):
@@ -243,7 +243,7 @@ class ValidatePreprocess(Validate):
         from vergeml.option import _OPTIONS_META_KEY
         setattr(self, _OPTIONS_META_KEY, options)
         super().__init__(name, plugins)
- 
+
 
 def display_err_in_file(filename, line, column, message, length=1, nlines=3):
     with open(filename, "r") as fp:
@@ -258,7 +258,7 @@ def _display_err(filename, line, column, message, length, nlines, content):
     res += lines[start:line+1]
     res += [(' ' * column) + ("^" * length), message]
     return "\n".join(res)
-        
+
 def load_yaml_file(filename, label='YAML file', loader=yaml.Loader):
     try:
         with open(filename, "r") as fp:
@@ -278,7 +278,7 @@ def load_yaml_file(filename, label='YAML file', loader=yaml.Loader):
             message = f"Could not read {label} {filename}: {problem}"
         else:
             message = f"Could not read {label} {filename}: YAML Error"
-        
+
         suggestion = f"There is a syntax error in your {label} - please fix it and try again."
 
         raise VergeMLError(message, suggestion)
@@ -289,7 +289,7 @@ def load_yaml_file(filename, label='YAML file', loader=yaml.Loader):
 
 
 class _YAMLAnalyzer(yaml.reader.Reader, yaml.scanner.Scanner):
- 
+
     def __init__(self, stream):
         yaml.reader.Reader.__init__(self, stream)
         yaml.scanner.Scanner.__init__(self)
@@ -307,7 +307,7 @@ def _get_location(an, key, kind):
                 tk = an.get_token()
                 length = len(tk.value)
                 return (mark.line, mark.column + 1, length)
-    
+
     length = len(key) + 1
     return (mark.line, max(0, mark.column - length), length)
 
@@ -346,14 +346,14 @@ def yaml_find_definition(stream, key, kind='key'):
             indices.pop()
         elif isinstance(tk, yaml.KeyToken) and 0 <= level < len(keys) and isinstance(keys[level], str):
             name = an.get_token().value
-            
+
             if name == keys[level] and all(matches[:level]):
                 matches[level] = True
                 if all(matches):
                     return _get_location(an, keys[-1], kind)
-        
+
         elif isinstance(tk, yaml.BlockEntryToken):
-            
+
             if 0 <= level < len(keys) and isinstance(keys[level], int):
                 if keys[level] == indices[level] and all(matches[:level]):
                     matches[level] = True
@@ -361,6 +361,6 @@ def yaml_find_definition(stream, key, kind='key'):
                         return _get_location(an, keys[-1], kind)
 
             indices[level] += 1
-        
+
         tk = an.get_token()
     return None

@@ -49,8 +49,8 @@ def option(name, default=None, descr=None, type=None, validate=None, transform=N
         :param subcommand:  If true, the option is a subcommand and is parsed as command:subcommand
         """
 
-   
-   
+
+
     def decorator(o):
         if o.__name__ not in ('ValidateDevice', 'ValidateData'):
             assert name not in _RESERVED_OPTION_NAMES, "Invalid option name: {} - name is reserved.".format(name)
@@ -62,14 +62,14 @@ def option(name, default=None, descr=None, type=None, validate=None, transform=N
         if not hasattr(o, _OPTIONS_META_KEY):
             setattr(o, _OPTIONS_META_KEY, [])
         options = getattr(o, _OPTIONS_META_KEY)
-        option = Option(name=name, 
-                        default=default, 
-                        type=type, 
-                        validate=validate, 
+        option = Option(name=name,
+                        default=default,
+                        type=type,
+                        validate=validate,
                         transform=transform,
-                        descr=descr, 
-                        long_descr=long_descr, 
-                        alias=alias, 
+                        descr=descr,
+                        long_descr=long_descr,
+                        alias=alias,
                         short=short,
                         flag=flag,
                         yaml_only=yaml_only,
@@ -92,7 +92,7 @@ def train():
 
 _VALIDATE_REGEX = r"^(<|>|>=|<=)([0-9][0-9]*(\.[0-9]*)?)$"
 class Option:
-    def __init__(self, name, default=None, type=None, validate=None, transform=None, descr=None, long_descr=None, 
+    def __init__(self, name, default=None, type=None, validate=None, transform=None, descr=None, long_descr=None,
                  alias=None, short=None, flag=False, yaml_only=False, command_line=False, subcommand=False, plugins=PLUGINS):
         """Defines an option.
 
@@ -102,11 +102,11 @@ class Option:
             for val in validate.split(","):
                 val = val.strip()
                 assert re.match(_VALIDATE_REGEX, val)
-        
+
         self.name = name
         self.default = default
-        
-        self.type = type 
+
+        self.type = type
         if not self.type and default is not None:
             self.type = builtins.type(default)
 
@@ -121,7 +121,7 @@ class Option:
         self.yaml_only = yaml_only
         self.command_line = command_line
         self.subcommand = subcommand
-    
+
     @staticmethod
     def discover(o, plugins=PLUGINS):
         res = []
@@ -130,15 +130,15 @@ class Option:
             for r in res:
                 r.plugins = plugins
         return res
-        
+
     def _invalid_value(self, value, suggestion=None):
-        
+
         return VergeMLError(f"Invalid value for option {self.name}.", suggestion, hint_type='value', hint_key=self.name)
-    
+
     def validate_value(self, value):
         if not self.validate:
             return
-        
+
         if hasattr(self.type, '__origin__') and self.type.__origin__ == Union and \
            type(None) in self.type.__args__ and value in (None, 'null', 'Null', 'NULL'):
            return
@@ -171,14 +171,14 @@ class Option:
                 elif op == '<=':
                     if not value <= num:
                         raise self._invalid_value(value, f"Must be less than or equal to {num_str}")
-    
+
     def cast_value(self, value, type_=None):
 
         type_ = type_ or self.type
 
         if not type_:
             return value
-        
+
         if isinstance(type_, str):
             if type_ in ('AI', 'Optional[AI]') and isinstance(value, (str, int, float, bool)):
                 return str(value)
@@ -191,7 +191,7 @@ class Option:
                     raise ValueError("Could not cast to AI")
             elif type_ in ('AI', 'Optional[AI]'):
                 raise ValueError("Could not cast to AI")
-            
+
             if type_ == 'file':
                 if isinstance(value, str):
                     return value
@@ -209,7 +209,7 @@ class Option:
                     raise ValueError("Could not cast to file")
 
             type_ = eval(type_)
-        
+
         if type_ == int:
             try:
                 if isinstance(value, (int, float, str)) and not isinstance(value, bool):
@@ -237,8 +237,8 @@ class Option:
         elif type_ == bool:
             if isinstance(value, bool):
                 return value
-            elif value in  ('y', 'Y', 'yes', 'Yes', 'YES', 
-                            'on', 'On', 'ON', 
+            elif value in  ('y', 'Y', 'yes', 'Yes', 'YES',
+                            'on', 'On', 'ON',
                             'true', 'True', 'TRUE'):
                 return True
             elif value in  ('n', 'N', 'no', 'No', 'NO',
@@ -280,27 +280,31 @@ class Option:
                 if not found:
                     raise self._invalid_value(value)
                 return res
-    
+
     def transform_value(self, value):
         if self.transform:
             return self.transform(value)
         else:
             return value
 
+    # REVIEW remove this
     def is_optional(self):
         type_optional = hasattr(self.type, '__origin__') and \
                         self.type.__origin__ == Union and \
                         type(None) in self.type.__args__
         type_optional_str = isinstance(self.type, str) and self.type.startswith('Optional')
-            
+
         return self.default is not None or type_optional or type_optional_str
-    
+
+    def is_required(self):
+        return not self.is_optional()
+
     def is_ai_option(self):
         return self.name.startswith("@")
 
     def is_argument_option(self):
         return self.name.startswith("<") and self.name.endswith(">")
-    
+
 
     def _type_descr(self, tp):
         tp_descr = ""
@@ -317,7 +321,7 @@ class Option:
                 tp_descr = "a list of files"
             else:
                 tp = eval(tp)
-        
+
         if not tp_descr:
             if hasattr(tp, '__origin__'):
                 if tp.__origin__ in (list, List):
@@ -348,7 +352,7 @@ class Option:
 
         elif tp_descr and isinstance(self.validate, (tuple, list)):
             tp_descr = "one of (" + ", ".join(map(lambda e: str(e), self.validate)) + ")"
-            
+
         if self.default:
             tp_descr += ", default: " + str(self.default)
 

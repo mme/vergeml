@@ -37,6 +37,14 @@ class _CommandCallProxy:
 
         return fun(args, env)
 
+    @staticmethod
+    def class_wrapper(klass, name):
+        """Wraps a class command.
+        """
+        def _wrapper(*args, **kwargs):
+            return _CommandCallProxy(name, klass(*args, **kwargs))
+        return _wrapper
+
     def __call__(self, args, env):
         return _CommandCallProxy._wrap_call(
             self.__name__, self.__wrapped_obj__, args, env)
@@ -64,14 +72,6 @@ class _CommandCallProxy:
 
             return _CommandCallProxy._wrap_call(name, _fun, args, env)
 
-        return _wrapper
-
-    @staticmethod
-    def class_wrapper(klass, name):
-        """Wraps a class command.
-        """
-        def _wrapper(*args, **kwargs):
-            return _CommandCallProxy(name, klass(*args, **kwargs))
         return _wrapper
 
 
