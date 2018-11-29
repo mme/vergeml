@@ -1,5 +1,5 @@
 import sys
-from vergeml.utils import VergeMLError, parse_ai_names
+from vergeml.utils import VergeMLError, parse_trained_models
 from vergeml.validate import load_yaml_file, ValidateDevice, ValidateData
 from vergeml import __version__
 from vergeml.env import Environment
@@ -164,7 +164,7 @@ def run(argv, plugins=PLUGINS):
        exit()
 
     args = _prepare_args(args)
-    ai_names, after_names = parse_ai_names(rest)
+    ai_names, after_names = parse_trained_models(rest)
 
     AI = next(iter(ai_names), None)
 
@@ -200,20 +200,9 @@ def run(argv, plugins=PLUGINS):
                            suggestion=did_you_mean(command_names, cmdname),
                            help_topic='*help*')
     try:
-        env_conf = env.get(cmdname) or {}
         cmd = Command.discover(plugin)
         assert cmd
-        args = cmd.parse(rest, env_conf)
-
-        if not cmd.free_form:
-            # set defaults
-            for opt in cmd.options:
-                if opt.name not in args:
-                    args[opt.name] = opt.default
-            # merge back into env
-            for k,v in args.items():
-                env.set(f"{cmdname}.{k}", v)
-        # env.set("command", cmdname)
+        args = cmd.parse(rest)
 
         try:
             # return the result for unit testing
@@ -318,7 +307,7 @@ def main(argv=None, plugins=PLUGINS):
     except Exception as e:
         if e.__class__.__name__ == 'ResourceExhaustedError':
             print("Error! Your GPU ran out of memory.")
-            print("Please try lowering resource usage by e.g. decreasing model parameters such as batch size.")
+            print("Try lowering resource usage by e.g. decreasing model parameters such as batch size.")
         else:
             raise e
 

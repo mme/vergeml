@@ -25,7 +25,7 @@ class VergeMLError(Exception):
         self.hint_type = hint_type
         self.hint_key = hint_key
         self.help_topic = help_topic
-    
+
     def __str__(self):
         if self.suggestion:
             if len(self.message + self.suggestion) < 80:
@@ -64,18 +64,18 @@ def introspect(call):
 
 # taken from here: https://www.python-course.eu/levenshtein_distance.php
 def _iterative_levenshtein(s, t):
-    """ 
+    """
         iterative_levenshtein(s, t) -> ldist
-        ldist is the Levenshtein distance between the strings 
+        ldist is the Levenshtein distance between the strings
         s and t.
-        For all i and j, dist[i,j] will contain the Levenshtein 
-        distance between the first i characters of s and the 
+        For all i and j, dist[i,j] will contain the Levenshtein
+        distance between the first i characters of s and the
         first j characters of t
     """
     rows = len(s)+1
     cols = len(t)+1
     dist = [[0 for x in range(cols)] for x in range(rows)]
-    # source prefixes can be transformed into empty strings 
+    # source prefixes can be transformed into empty strings
     # by deletions:
     for i in range(1, rows):
         dist[i][0] = i
@@ -83,7 +83,7 @@ def _iterative_levenshtein(s, t):
     # by inserting the characters
     for i in range(1, cols):
         dist[0][i] = i
-        
+
     for col in range(1, cols):
         for row in range(1, rows):
             if s[row-1] == t[col-1]:
@@ -93,7 +93,7 @@ def _iterative_levenshtein(s, t):
             dist[row][col] = min(dist[row-1][col] + 1,      # deletion
                                  dist[row][col-1] + 1,      # insertion
                                  dist[row-1][col-1] + cost) # substitution
- 
+
     return dist[row][col]
 
 def did_you_mean(candidates, value, fmt="'{}'"):
@@ -173,7 +173,7 @@ def dict_paths(d, path=None):
     return res
 
 
-def parse_ai_names(argv):
+def parse_trained_models(argv):
     names = []
     for part in argv:
         if re.match("^@[a-zA-Z0-9_-]+$", part):
@@ -185,7 +185,7 @@ def parse_ai_names(argv):
 
 def parse_split(value):
     """Decodes the split value.
-    
+
     Returns a tuple (type, value) where type is either perc, num or dir set.
     """
     assert isinstance(value, (int, str))
