@@ -6,8 +6,9 @@ import getopt
 from copy import deepcopy
 
 from vergeml.plugins import PLUGINS
-from vergeml.utils import did_you_mean, VergeMLError, parse_ai_names
+from vergeml.utils import did_you_mean, VergeMLError, parse_trained_models
 from vergeml.option import Option
+from vergeml.config import parse_command
 
 
 _CMD_META_KEY = '__vergeml_command__'
@@ -17,23 +18,50 @@ class _CommandCallProxy:
     """Proxy calling commands to setup the environment.
     """
 
-    def __init__(self, name, obj):
-        self.__name__ = name
+    def __init__(self, cmd, obj):
+        self.__cmd__ = cmd
         self.__wrapped_obj__ = obj
 
 
     @staticmethod
-    def _wrap_call(name, fun, args, env):
+    def _wrap_call(cmd, fun, args, env):
+        fn_args = deepcopy(args)
 
         # Let the environment know about the name of the command being
         # executed
-        env.current_command = name
+        env.current_command = cmd.name
+
+
+        # Free form commands deal with this manually
+        if not cmd.free_form:
+            # If existent, read settings from the config file
+            # REVIEW - catch the exception and print a pretty error!
+            config = parse_command(cmd, env.get(cmd.name))
+
+            # Set missing args from the config file
+            for k, arg in config.items():
+                fn_args.setdefault(k, arg)
+
+            # Set missing args from default
+            for opt in cmd.options:
+                if opt.name not in args and (opt.default is not None or not opt.is_required()):
+                    args[opt.name] = opt.default
+
+            # When required arguments are missing now, raise an error
+            for opt in cmd.options:
+                if opt.is_required() and opt.name not in args:
+
+                    # TODO show --name only when called via the command line
+                    raise VergeMLError('Missing argument --{opt.name}.', help_topic=cmd.name)
 
         # Set up defaults for the command. This will also give models a chance
         # to alter the configuration of the environment before command
         # execution.
 
-        env.set_defaults(name, args)
+        env.set_defaults(cmd.name, args)
+
+        # REVIEW
+        # When training, this is a good time to save the original configuration.
 
         return fun(args, env)
 
@@ -47,16 +75,16 @@ class _CommandCallProxy:
 
     def __call__(self, args, env):
         return _CommandCallProxy._wrap_call(
-            self.__name__, self.__wrapped_obj__, args, env)
+            self.__cmd__, self.__wrapped_obj__, args, env)
 
     def __getattr__(self, name):
-        if name in ('__wrapped_obj__', '__name__'):
+        if name in ('__wrapped_obj__', '__cmd__'):
             raise AttributeError()
 
         return getattr(self.__wrapped_obj__, name)
 
     def __setattr__(self, name, value):
-        if name in ('__wrapped_obj__', '__name__'):
+        if name in ('__wrapped_obj__', '__cmd__'):
             self.__dict__[name] = value
         else:
             setattr(self.__wrapped_obj__, name, value)
@@ -111,9 +139,9 @@ def command(name=None, # pylint: disable=R0913
 
         if inspect.isclass(obj):
             setattr(obj, _CMD_META_KEY, cmd)
-            _wrapper = _CommandCallProxy.class_wrapper(obj, _name)
+            _wrapper = _CommandCallProxy.class_wrapper(obj, cmd)
         else:
-            _wrapper = _CommandCallProxy.function_wrapper(obj, _name)
+            _wrapper = _CommandCallProxy.function_wrapper(obj, cmd)
 
         setattr(_wrapper, _CMD_META_KEY, cmd)
 
@@ -154,21 +182,21 @@ class Command:
         self.kind = kind
         self.free_form = free_form
 
-        ai_param = list(filter(lambda o: o.is_ai_option(), options))
-        assert len(ai_param) <= 1, "Can only have one AI option."
-        if ai_param:
-            ai_param = ai_param[0]
-            assert ai_param.type in (None, 'AI', 'Optional[AI]', 'List[AI]', list, str)
+        at_option = list(filter(lambda o: o.is_at_option(), options))
+        assert len(at_option) <= 1, "Can only have one @option."
+        if at_option:
+            at_option = at_option[0]
+            assert at_option.type in (None, 'AI', 'Optional[AI]', 'List[AI]', list, str)
         arg_param = list(filter(lambda o: o.is_argument_option(), options))
         assert len(arg_param) <= 1, "Can only have one argument parameter."
 
 
     @staticmethod
-    def discover(o, plugins=PLUGINS):
+    def discover(obj, plugins=PLUGINS):
         """Discover the command configuration defined on a method or object."""
         res = None
-        if hasattr(o, _CMD_META_KEY):
-            res = getattr(o, _CMD_META_KEY)
+        if hasattr(obj, _CMD_META_KEY):
+            res = getattr(obj, _CMD_META_KEY)
             res.plugins = plugins
             for option in res.options:
                 option.plugins = plugins
@@ -208,7 +236,7 @@ class Command:
         optional = []
 
         for option in self.options:
-            if option.is_ai_option():
+            if option.is_at_option():
                 ai_option = option
             elif option.is_argument_option():
                 argument_option = option
@@ -261,7 +289,7 @@ class Command:
                 options.append((ai_option.name, "The name of a trained AI."))
 
         for opt in self.options:
-            if opt.is_ai_option() or opt.is_argument_option() or bool(opt.subcommand):
+            if opt.is_at_option() or opt.is_argument_option() or bool(opt.subcommand):
                 continue
             opt_name = "--" + opt.name
             if opt.short:
@@ -321,126 +349,144 @@ class Command:
         message = message or "Invalid arguments."
         raise VergeMLError(message, help_topic=help_topic)
 
-    def parse(self, argv, env_options={}):
-        """Parse the command and return the result."""
+    def parse(self, argv):
+        """Parse command line options."""
         res = {}
-        ai_names, rest = parse_ai_names(argv)
+        at_names, rest = parse_trained_models(argv)
 
-        # subcommand
-        subcommand_param = next((filter(lambda o: bool(o.subcommand), self.options)), None)
+        # in case of a subcommand, parse it and return the result
+        sub_res = self._parse_subcommand(argv, rest)
+        if sub_res is not None:
+            return sub_res
 
-        if subcommand_param:
-            if not ":" in rest[0]:
-                raise VergeMLError(f"Missing {subcommand_param.name}.", help_topic=self.name)
-            command, subcommand = rest[0].split(":", 1)
-            assert command == self.name
-            argv = deepcopy(argv)
-            argv[argv.index(rest[0])] = subcommand
-
-            plugin = self.plugins.get(subcommand_param.subcommand, subcommand)
-            if not plugin:
-                raise VergeMLError(f"Invalid {subcommand_param.name}.", help_topic=self.name)
-
-            cmd = Command.discover(plugin)
-            try:
-                res = cmd.parse(argv, env_options)
-                res[subcommand_param.name] = subcommand
-                for opt in cmd.options:
-                    if opt.name not in res:
-                        res[opt.name] = opt.default
-                return res
-            except VergeMLError as e:
-                e.help_topic = f"{command}:{subcommand}"
-                raise e
-
-        # AI params
-        ai_param = next((filter(lambda o: o.is_ai_option(), self.options)), None)
-
-        if ai_param:
-            if ai_param.type in ('AI', None, str):
-                ai_conf = 'required'
-            elif ai_param.type == 'Optional[AI]':
-                ai_conf = 'optional'
-            elif ai_param.type in (list, 'list', 'List[AI]'):
-                ai_conf = 'list'
-        else:
-            ai_conf = 'none'
-
-
-        if (ai_conf == 'optional' and len(ai_names) > 1) or \
-           (ai_conf == 'required' and len(ai_names) != 1) or \
-           (ai_conf == 'none' and len(ai_names) != 0):
-            raise self._invalid_arguments(help_topic=self.name)
-
-        if ai_conf in ('required', 'optional'):
-            res[ai_param.name] = next(iter(ai_names), None)
-        elif ai_conf == 'list':
-            res[ai_param.name] = ai_names
+        # Deal with @name options
+        at_opt = self._parse_at_option(at_names, res)
 
         # command name
         assert self.name == rest.pop(0)
 
-        # in case of free form commands, just return AI and rest
+        # in case of free form commands, just return @names and the rest
         if self.free_form:
-            ai_res = None
-            if ai_param:
-                ai_res = res.get(ai_param.name)
-            return (ai_res, rest)
+            return (res.get(at_opt.name) if at_opt else None, rest)
 
+        # parse options
+        args, extra = self._parse_opts(rest)
+
+        # parse arguments
+        self._parse_arguments(extra, res)
+
+        # validate
+        self._parse_validate(args, res)
+
+        return res
+
+    def _parse_subcommand(self, argv, rest):
+
+        sub_option = next((filter(lambda o: bool(o.subcommand), self.options)), None)
+
+        if sub_option:
+            if not ":" in rest[0]:
+                raise VergeMLError(f"Missing {sub_option.name}.", help_topic=self.name)
+            cmd_name, sub_name = rest[0].split(":", 1)
+            assert cmd_name == self.name
+            argv = deepcopy(argv)
+            argv[argv.index(rest[0])] = sub_name
+
+            plugin = self.plugins.get(sub_option.subcommand, sub_name)
+            if not plugin:
+                raise VergeMLError(f"Invalid {sub_option.name}.", help_topic=self.name)
+
+            cmd = Command.discover(plugin)
+            try:
+                res = cmd.parse(argv)
+                res[sub_option.name] = sub_name
+                for opt in cmd.options:
+                    if opt.name not in res:
+                        res[opt.name] = opt.default
+                return res
+            except VergeMLError as err:
+                err.help_topic = f"{cmd_name}:{sub_name}"
+                raise err
+        else:
+            return None
+
+    def _parse_at_option(self, at_names, res):
+        at_opt = next((filter(lambda o: o.is_at_option(), self.options)), None)
+
+        if at_opt:
+            if at_opt.type in ('AI', None, str):
+                at_conf = 'required'
+            elif at_opt.type == 'Optional[AI]':
+                at_conf = 'optional'
+            elif at_opt.type in (list, 'list', 'List[AI]'):
+                at_conf = 'list'
+        else:
+            at_conf = 'none'
+
+
+        if at_conf == 'optional' and len(at_names) > 1:
+            # An optional parameter (either specified or not)
+            raise self._invalid_arguments(help_topic=self.name)
+
+        elif at_conf == 'required' and len(at_names) != 1:
+            # A required parameter must be present
+            raise self._invalid_arguments(help_topic=self.name)
+
+        elif at_conf == 'none' and at_names:
+            # No @names
+            raise self._invalid_arguments(help_topic=self.name)
+
+        if at_conf in ('required', 'optional'):
+            res[at_opt.name] = next(iter(at_names), None)
+        elif at_conf == 'list':
+            res[at_opt.name] = at_names
+
+        return at_opt
+
+    def _parse_opts(self, rest):
         longopts = []
         shortopts = ""
 
         for opt in self.options:
-            if opt.is_ai_option() or opt.is_argument_option():
+            if opt.is_at_option() or opt.is_argument_option():
                 continue
 
             if opt.flag:
-                opt_type = eval(opt.type) if isinstance(opt.type, str) else opt.type
-                assert opt_type in (bool, None)
+                assert opt.type.has_type(str, bool)
                 longopts.append(opt.name)
             else:
                 longopts.append(opt.name + "=")
 
             if opt.short:
-
-                letter = opt.short
-                assert letter not in shortopts
+                assert opt.short not in shortopts
 
                 if opt.type == bool:
-                    shortopts += letter
+                    shortopts += opt.short
                 else:
-                    shortopts += letter + ":"
+                    shortopts += opt.short + ":"
 
         try:
             args, extra = getopt.getopt(rest, shortopts, longopts)
         except getopt.GetoptError as err:
             if err.opt:
-                candidates = list(shortopts.replace(":", "")) + list(map(lambda o: o.rstrip("="), longopts))
-                suggestion = did_you_mean(candidates, err.opt)
+                cand_s = list(shortopts.replace(":", ""))
+                cand_l = list(map(lambda o: o.rstrip("="), longopts))
+                suggestion = did_you_mean(cand_s + cand_l, err.opt)
                 dashes = '-' if len(err.opt) == 1 else '--'
-                raise VergeMLError(f"Invalid option {dashes}{err.opt}", suggestion, help_topic=self.name)
+                raise VergeMLError(f"Invalid option {dashes}{err.opt}", suggestion,
+                                   help_topic=self.name)
             else:
                 raise VergeMLError(f"Invalid option.", help_topic=self.name)
 
+        return args, extra
 
-        shorts_dict = {}
-        longs_dict = {}
-        for k, v in args:
-            if k.startswith("--"):
-                longs_dict[k.lstrip("-")] = v
-            else:
-                shorts_dict[k.lstrip("-")] = v
+    def _parse_arguments(self, extra, res):
+        arg_option = next((filter(lambda o: o.is_argument_option(), self.options)), None)
 
-        extra_param = next((filter(lambda o: o.is_argument_option(), self.options)), None)
-
-        if extra_param:
-            if extra_param.is_optional():
+        if arg_option:
+            if not arg_option.is_required():
                 extra_conf = 'optional'
-            elif isinstance(extra_param.type, str) and extra_param.type.startswith("List"):
-                extra_conf = 'list'
-            elif hasattr(extra_param.type, '__origin__') and extra_param.type.__origin__ == list:
-                extra_conf = 'list'
-            elif extra_param.type == list:
+            elif arg_option.has_type(list):
                 extra_conf = 'list'
             else:
                 extra_conf = 'required'
@@ -448,45 +494,50 @@ class Command:
             extra_conf = 'none'
 
         if (extra_conf == 'optional' and len(extra) > 1) or \
-            (extra_conf == 'none' and len(extra) != 0):
+            (extra_conf == 'none' and extra):
             raise self._invalid_arguments(help_topic=self.name)
 
-        elif extra_conf == 'required' and len(extra) == 0:
-            raise self._invalid_arguments(f"Missing argument {extra_param.name}.", help_topic=self.name)
+        elif extra_conf == 'required' and extra:
+            raise self._invalid_arguments(f"Missing argument {arg_option.name}.",
+                                          help_topic=self.name)
 
         elif extra_conf == 'required' and len(extra) > 1:
             raise self._invalid_arguments(f"Invalid arguments.", help_topic=self.name)
 
         if extra_conf in ('optional', 'required'):
-            res[extra_param.name] = next(iter(extra), None)
+            res[arg_option.name] = next(iter(extra), None)
         elif extra_conf == 'list':
-            res[extra_param.name] = extra
+            res[arg_option.name] = extra
+
+    def _parse_validate(self, args, res):
+
+        shorts_dict = {}
+        longs_dict = {}
+
+        for k, val in args:
+            if k.startswith("--"):
+                longs_dict[k.lstrip("-")] = val
+            else:
+                shorts_dict[k.lstrip("-")] = val
 
         for opt in self.options:
-            if opt.is_ai_option() or opt.is_argument_option():
+            if opt.is_at_option() or opt.is_argument_option():
                 continue
 
             value = None
+
             if opt.flag:
-                if opt.name in longs_dict:
-                    value = True
+                value = opt.name in longs_dict
             elif opt.name in longs_dict:
                 value = longs_dict[opt.name]
 
-            if opt.short:
-                letter = opt.short
-                if letter in shorts_dict:
-                    if opt.type == bool:
-                        value = True
-                    else:
-                        value = shorts_dict[letter]
+            if opt.short and opt.short in shorts_dict:
+                if opt.type == bool:
+                    value = True
+                else:
+                    value = shorts_dict[opt.short]
 
-            if value is None and opt.name in env_options:
-                value = env_options[opt.name]
-
-            if value is None and not opt.is_optional():
-                raise self._invalid_arguments(message=f'Missing argument --{opt.name}.', help_topic=self.name)
-            elif value is not None:
+            if value is not None:
                 try:
                     value = opt.cast_value(value)
                     value = opt.transform_value(value)
@@ -497,16 +548,11 @@ class Command:
                     err.message = f"Invalid value for option --{opt.name}."
                     raise err
 
-        return res
-
 
 class CommandPlugin:
     def __init__(self, name, plugins=PLUGINS):
         self.name = name
         self.plugins = plugins
-
-        # avoid circular dependency
-        from vergeml.command import Command
 
         cmd = Command.discover(self)
         assert cmd

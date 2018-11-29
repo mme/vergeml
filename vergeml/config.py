@@ -295,6 +295,7 @@ def _parse_data_preprocess(res, section, plugins):
 def parse_command(command, section):
     """Parse a command in the config file.
     """
+    section = section or {}
     res = {}
 
     _raise_unknown_option(command.name, [o.name for o in command.options],

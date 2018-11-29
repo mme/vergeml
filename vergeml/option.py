@@ -5,6 +5,14 @@ import vergeml.glossary as glossary
 from vergeml.plugins import PLUGINS
 from vergeml.utils import VergeMLError, did_you_mean
 from copy import deepcopy
+from io import IOBase
+
+# types
+class TrainedModel: # pylint: disable=R0903
+    """A type representing a trained instance of a model."""
+
+class File: # pylint: disable=R0903
+    """A type representing a file that can be read"""
 
 _RESERVED_OPTION_NAMES = {
     'version', 'file', 'model', 'samples-dir', 'val-split', 'test-split', 'cache-dir', 'random-seed',
@@ -134,6 +142,14 @@ class Option:
     def _invalid_value(self, value, suggestion=None):
 
         return VergeMLError(f"Invalid value for option {self.name}.", suggestion, hint_type='value', hint_key=self.name)
+
+    def has_type(self, *types):
+        """Check if the option is of a type in the list types"""
+        for typ in types:
+            typ_ = eval(typ) if isinstance(typ, str) else typ # pylint: disable=W0123
+            if self.type == typ_:
+                return True
+        return False
 
     def validate_value(self, value):
         if not self.validate:
@@ -299,7 +315,7 @@ class Option:
     def is_required(self):
         return not self.is_optional()
 
-    def is_ai_option(self):
+    def is_at_option(self):
         return self.name.startswith("@")
 
     def is_argument_option(self):

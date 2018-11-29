@@ -1,4 +1,4 @@
-from vergeml.utils import dict_set_path, dict_get_path, dict_del_path, dict_has_path, dict_merge, dict_paths, parse_ai_names
+from vergeml.utils import dict_set_path, dict_get_path, dict_del_path, dict_has_path, dict_merge, dict_paths, parse_trained_model
 
 def test_set_path():
     d = {}
@@ -56,10 +56,9 @@ def test_paths2():
     assert dict_paths(d, 'a') == ['a.b.c1', 'a.b.d1']
 
 
-def test_parse_ai_names():
-    assert parse_ai_names(["@touchy-automaton", "train"]) == (["touchy-automaton"], ["train"])
-    assert parse_ai_names(["@touchy-automaton", "@evil-skynet", "run", "tensorboard"]) == \
+def test_parse_trained_model():
+    assert parse_trained_model(["@touchy-automaton", "train"]) == (["touchy-automaton"], ["train"])
+    assert parse_trained_model(["@touchy-automaton", "@evil-skynet", "run", "tensorboard"]) == \
                          (["touchy-automaton", "evil-skynet"], ["run", "tensorboard"])
-    assert parse_ai_names(["train", "--epochs=20"]) == \
+    assert parse_trained_model(["train", "--epochs=20"]) == \
                          ([], ["train", "--epochs=20"])
-    

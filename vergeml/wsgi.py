@@ -20,7 +20,7 @@ class WSGIApp:
             cmd = Command.discover(model_fn)
             if cmd.kind == 'predict':
                 self.fns[cmd.name] = (cmd, model_fn)
-        
+
         if not len(self.fns):
             raise VergeMLError(f"@{env.AI} can't be run as a REST service.")
 
@@ -55,7 +55,7 @@ class WSGIApp:
         start_response(status, response_headers)
 
         return [response_body]
-    
+
     def _serve_file(self, mime_type, *path):
         path = list(path)
         path.insert(0, 'other')
@@ -65,22 +65,22 @@ class WSGIApp:
             return '200 OK', f.read(), mime_type
 
     def _serve_index(self, environ):
-        index = _TEMPLATE.format(name=self.env.AI, 
+        index = _TEMPLATE.format(name=self.env.AI,
                                  content='<a id="hamburger">&#9776;</a> <div id="logo-big"> </div>',
                                  menu=self._make_menu())
         return '200 OK', index.encode('utf-8'), 'text/html'
-    
+
     def _serve_function(self, name, environ):
         host = "http://" + environ.get('SERVER_NAME') + ":" + str(environ.get('SERVER_PORT'))
         content_a = _TEMPLATE_A.format(host=host,
                                         name=name,
                                         descr=self.fns[name][0].descr,
                                         fields=self._make_fields(name))
-        index = _TEMPLATE.format(name=self.env.AI, 
+        index = _TEMPLATE.format(name=self.env.AI,
                                  content=content_a + _TEMPLATE_B,
                                  menu=self._make_menu(name))
         return '200 OK', index.encode('utf-8'), 'text/html'
-    
+
     def _make_menu(self, active=None):
         res = []
         for k in self.fns.keys():
@@ -91,13 +91,13 @@ class WSGIApp:
 
     def _make_fields(self, name):
         cmd = self.fns[name][0]
-        
+
 
         res = []
         for o in cmd.options:
-            if o.is_ai_option() or o.command_line:
+            if o.is_at_option() or o.command_line:
                 continue
-            
+
             display_name = o.name.strip("<").strip(">")
             descr = o.descr + " (" + o.human_type() + ")"
 
@@ -119,7 +119,7 @@ class WSGIApp:
     def _predict(self, name, environ):
         if not is_post_request(environ):
             return '400 BAD REQUEST', b'Bad Request', 'text/plain'
-        
+
         cmd, fn = self.fns[name]
         form = get_post_form(environ)
 
@@ -127,18 +127,18 @@ class WSGIApp:
         tempdirs = []
         try:
             for o in cmd.options:
-                if o.is_ai_option():
+                if o.is_at_option():
                     continue
-                
+
                 if o.command_line:
                     args[o.name] = o.default
                     continue
-                
+
                 form_name = o.name.lstrip("<").rstrip(">")
 
                 if form_name in form:
                     value = form[form_name]
-                    
+
                     if o.type == "List[file]" or o.type == "file" or o.type == "Optional[file]":
                         files = []
                         if not isinstance(value, list):
@@ -153,7 +153,7 @@ class WSGIApp:
                             with open(name, 'wb') as f:
                                 shutil.copyfileobj(item.file, f)
                             files.append(name)
-                        
+
                         if o.type == "file":
                             if len(files) == 0:
                                 raise VergeMLError("Missing argument: {}".format(o.name))
@@ -161,11 +161,11 @@ class WSGIApp:
                         elif o.type == "Optional[file]":
                             if len(files) > 0:
                                 args[o.name] = files[0]
-                        else:                            
+                        else:
                             args[o.name] = files
                     else:
                         args[o.name] = value.value
-                    
+
                     if o.name in args:
                         value = args[o.name]
                         value = o.cast_value(value)
@@ -181,7 +181,7 @@ class WSGIApp:
             for d in tempdirs:
                 shutil.rmtree(d)
             return '400 BAD REQUEST', e.message.encode('utf-8'), 'text/plain'
-        
+
         try:
             res = fn(args, self.env)
         finally:
@@ -195,7 +195,7 @@ def is_post_request(environ):
     if environ['REQUEST_METHOD'].upper() != 'POST':
         return False
     content_type = environ.get('CONTENT_TYPE', 'application/x-www-form-urlencoded')
-    return (content_type.startswith('application/x-www-form-urlencoded') 
+    return (content_type.startswith('application/x-www-form-urlencoded')
         or content_type.startswith('multipart/form-data'))
 
 def get_post_form(environ):
@@ -210,7 +210,7 @@ def get_post_form(environ):
     fs = cgi.FieldStorage(fp=input,
                           environ=environ,
                           keep_blank_values=1)
-    
+
     return fs
 
 # from https://github.com/pallets/werkzeug/blob/master/werkzeug/utils.py
@@ -259,7 +259,7 @@ _TEMPLATE = """
     </div>
 </body>
 <script src="js/rest.js"></script>
-</html> 
+</html>
 
 """
 
@@ -273,7 +273,7 @@ _TEMPLATE_A = """
     <div class="body">
         <form id="main-form" action="{name}" method="POST" enctype="multipart/form-data">
             <h2>{descr}</h2>
-            
+
             {fields}
 
             <div class="submit">

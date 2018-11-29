@@ -24,6 +24,7 @@ from vergeml.libraries import KerasLibrary, TensorFlowLibrary, TorchLibrary
 from vergeml.libraries import NumPyLibrary, PythonInterpreter
 from vergeml.display import DISPLAY, TrainingFeedback
 
+# REVIEW add a method to push/pop the environment
 
 ENV = None
 
@@ -127,44 +128,9 @@ class Environment:
         self._config['trainings-dir'] = trainings_dir
         self._config['model'] = model
 
+
+        # REVIEW get rid of validators
         validators = {}
-
-        # add validators for commands
-        # REVIEW don't validate all commands !!?!
-        for k, val in plugins.all('vergeml.cmd').items():
-            cmd = Command.discover(val)
-            validators[cmd.name] = ValidateOptions(cmd.options, k, plugins=plugins)
-
-        # REVIEW again, leave out this tricky code by *not* evaluating everything.
-
-        # now it gets a bit tricky - we need to peek at the model name
-        # to find the right validators to create for model commands.
-        peek_model_name = model
-        peek_trainings_dir = trainings_dir
-        # to do this, we have to first have a look at the project file
-        try:
-            project_doc = load_yaml_file(project_file) if project_file else {}
-            # only update model name if empty (project file does not override command line)
-            peek_model_name = peek_model_name or project_doc.get('model', None)
-            # pick up trainings-dir in the same way
-            peek_trainings_dir = peek_trainings_dir or project_doc.get('trainings-dir', None)
-            # if we don't have a trainings dir yet, set to default
-            peek_trainings_dir = peek_trainings_dir or os.path.join(project_dir or "", "trainings")
-            # now, try to load the data.yaml file and see if we have a model definition there
-            data_doc = load_yaml_file(peek_trainings_dir, AI, "data.yaml") if AI else {}
-            # if we do, this overrides everything, also the one from the command line
-            peek_model_name = data_doc.get('model', peek_model_name)
-            # finally, if we have a model name, set up validators
-            if peek_model_name:
-                for fn in Command.find_functions(plugins.get("vergeml.model", peek_model_name),
-                                                 plugins=plugins):
-                    cmd = Command.discover(fn)
-                    validators[cmd.name] = ValidateOptions(cmd.options, cmd.name, plugins)
-        except Exception:
-            # in this case we don't care if something went wrong - the error
-            # will be reported later
-            pass
-
         # These validators should be the only ones!
 
         # finally, validators for device and data sections
