@@ -103,12 +103,12 @@ def did_you_mean(candidates, value, fmt="'{}'"):
     return 'Did you mean ' + fmt.format(names[0][1]) + '?' if names else None
 
 
-def dict_set_path(d, path, value):
-    c = d
+def dict_set_path(dic, path, value):
+    cur = dic
     path = path.split(".")
     for key in path[:-1]:
-        c = c.setdefault( key, {} )
-    c[path[-1]] = value
+        cur = cur.setdefault( key, {} )
+    cur[path[-1]] = value
 
 def dict_del_path(d, path):
     if isinstance(path, str):
@@ -134,7 +134,7 @@ _DEFAULT = object()
 def dict_get_path(d, path, default=_DEFAULT):
     c = d
     for p in path.split("."):
-        if p in c:
+        if isinstance(c, dict) and p in c:
             c = c[p]
         elif default != _DEFAULT:
             return default

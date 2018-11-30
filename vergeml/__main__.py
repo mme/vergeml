@@ -1,6 +1,5 @@
 import sys
 from vergeml.utils import VergeMLError, parse_trained_models
-from vergeml.validate import load_yaml_file, ValidateDevice, ValidateData
 from vergeml import __version__
 from vergeml.env import Environment
 from vergeml.plugins import PLUGINS
@@ -183,8 +182,8 @@ def run(argv, plugins=PLUGINS):
     cmd_plugin = plugins.get('vergeml.cmd', cmdname)
     if cmd_plugin:
         plugin = cmd_plugin(cmdname, plugins=plugins)
-    elif env.model:
-        for model_fn in Command.find_functions(env.model):
+    elif env.model_plugin:
+        for model_fn in Command.find_functions(env.model_plugin):
             if cmdname == Command.discover(model_fn).name:
                 plugin = model_fn
                 break
@@ -193,7 +192,7 @@ def run(argv, plugins=PLUGINS):
         # collect all possible command names
         command_names = set(plugins.keys('vergeml.cmd'))
         if env.model:
-            model_commands = set(map(lambda f:Command.discover(f).name, Command.find_functions(env.model)))
+            model_commands = set(map(lambda f:Command.discover(f).name, Command.find_functions(env.model_plugin)))
             command_names.update(model_commands)
 
         raise VergeMLError(f"Invalid command '{cmdname}'.",
@@ -288,8 +287,8 @@ def main(argv=None, plugins=PLUGINS):
             print("Error! " + err_string, file=sys.stderr)
             # find all command topics
             commands = list(plugins.keys('vergeml.cmd'))
-            if ENV and ENV.model:
-                fns = Command.find_functions(ENV.model)
+            if ENV and ENV.model_plugin:
+                fns = Command.find_functions(ENV.model_plugin)
                 mcommands = list(map(lambda f: Command.discover(f).name, fns))
                 commands.extend(mcommands)
             # if the error is just one line and there is command help available, display the help message too.

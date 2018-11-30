@@ -143,6 +143,7 @@ class Option:
 
         return VergeMLError(f"Invalid value for option {self.name}.", suggestion, hint_type='value', hint_key=self.name)
 
+    # REVIEW code this properly
     def has_type(self, *types):
         """Check if the option is of a type in the list types"""
         for typ in types:

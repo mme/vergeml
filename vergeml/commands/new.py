@@ -7,17 +7,17 @@ import os.path
 @command('new', descr="Create a new VergeML project.")
 @option('<project-name>', type=str)
 class NewCommand(CommandPlugin):
-    
+
     def __call__(self, args, env):
-        dest = args['<project-name>']   
+        dest = args['<project-name>']
         if not env.model:
             template = "# model:\n#   name: <name of your model>\n"
         else:
-            template = env.model.project_file_template()
-        
+            template = env.model_plugin.project_file_template()
+
         if not template.endswith("\n"):
             template = template + "\n"
-        
+
         if os.path.exists(dest):
             raise VergeMLError("Directory already exists: {}".format(dest))
 
