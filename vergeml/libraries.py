@@ -14,7 +14,7 @@ class Library:
     @staticmethod
     def version():
         raise NotImplementedError
-    
+
     @staticmethod
     def setup(env):
         raise NotImplementedError
@@ -31,7 +31,7 @@ class KerasLibrary(Library):
         import keras # pylint: disable=E0401
         sys.stderr = stderr
         return keras.__version__
-    
+
     @staticmethod
     def setup(env):
         stderr = sys.stderr
@@ -48,7 +48,7 @@ class KerasLibrary(Library):
         if K.backend() == 'tensorflow':
             TensorFlowLibrary.setup(env)
             K.set_session(TensorFlowLibrary.create_session(env))
-    
+
     @staticmethod
     def callback(env, display_progress, stats):
         from keras.callbacks import Callback
@@ -65,7 +65,7 @@ class KerasLibrary(Library):
 
             def on_train_begin(self, logs=None):
                 logs = self._remove_keys(logs)
-                self.callback = env.progress_callback(self.params['epochs'], self.params['steps'], 
+                self.callback = env.progress_callback(self.params['epochs'], self.params['steps'],
                                                       self.display_progress, self.stats)
 
             def on_train_end(self, logs=None):
@@ -89,7 +89,7 @@ class KerasLibrary(Library):
                 logs = self._remove_keys(logs)
                 self.current_step += 1
                 self.callback(self.current_epoch, self.current_step, **logs)
-            
+
             def _remove_keys(self, logs):
                 from copy import deepcopy
                 logs = deepcopy(logs or {})
@@ -110,14 +110,14 @@ class TensorFlowLibrary(Library):
         import tensorflow # pylint: disable=E0401
         tensorflow.logging.set_verbosity(tensorflow.logging.ERROR)
         return tensorflow.__version__ #pylint: disable=E1101
-    
+
     @staticmethod
     def create_session(env):
         TensorFlowLibrary.setup(env)
         import tensorflow as tf # pylint: disable=E0401
 
         devid = env.get('device.id')
-        if devid != "auto":
+        if devid != "*auto*":
             if devid == "cpu":
                 devnum = None
             else:
@@ -133,9 +133,9 @@ class TensorFlowLibrary(Library):
         config = tf.ConfigProto(**args)
         if devid == "gpu":
             config.gpu_options.visible_device_list = devnum  # pylint: disable=locally-disabled, E1101
-        
+
         device_memory = env.get('device.memory')
-        if device_memory != 'auto':
+        if device_memory != '*auto*':
             # pylint: disable=E1101
             try:
                 fraction = float(device_memory.rstrip("%"))/100.
@@ -149,7 +149,7 @@ class TensorFlowLibrary(Library):
             config.gpu_options.allow_growth = True  # pylint: disable=locally-disabled, E1101
 
         return tf.Session(config=config)
-    
+
     @staticmethod
     def setup(env):
         import tensorflow # pylint: disable=E0401
@@ -166,7 +166,7 @@ class TorchLibrary(Library):
     def version():
         import torch # pylint: disable=E0401
         return torch.__version__
-    
+
     @staticmethod
     def setup(env):
         import torch # pylint: disable=E0401
@@ -183,7 +183,7 @@ class NumPyLibrary(Library):
     def version():
         import numpy # pylint: disable=E0401
         return numpy.__version__
-    
+
     @staticmethod
     def setup(env):
         import numpy
@@ -193,11 +193,11 @@ class PythonInterpreter(Library):
     @staticmethod
     def is_installed():
         return True
-    
+
     @staticmethod
     def version():
         return ".".join(map(str, sys.version_info[:3]))
-    
+
     @staticmethod
     def setup(env):
         import random
@@ -225,10 +225,10 @@ class CudaLibrary(Library):
             return f"{maj}.{min}"
         else:
             return "Unknown"
-    
+
     @staticmethod
     def devices():
-        
+
         cuda = _CUDA_OBJECT
         CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT = 16
         CU_DEVICE_ATTRIBUTE_MAX_THREADS_PER_MULTIPROCESSOR = 39
@@ -299,7 +299,7 @@ class CudaLibrary(Library):
                     cuda.cuCtxDetach(context)
             res.append(dev)
         return res
-    
+
     @staticmethod
     def devices_info():
         res = []
@@ -358,4 +358,3 @@ class CudaLibrary(Library):
             _CUDA_OBJECT = None
             _HAS_CUDA = False
 
-    

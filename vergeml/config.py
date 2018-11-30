@@ -126,14 +126,13 @@ def parse_data(section, plugins=PLUGINS, cache=None):
         section['cache'] = cache
 
     res = {
-        'input': None,
-        'output': None,
         'cache': '*auto*',
         'preprocess': []
     }
 
     # Raise an error if an unknown option is encountered
-    _raise_unknown_option('section', res.keys(), section.keys(), 'section')
+    _raise_unknown_option('data', ('input', 'output', 'cache', 'preprocess'),
+                          section.keys(), 'data')
 
     _parse_data_cache(res, section)
 
@@ -329,6 +328,38 @@ def _invalid_option(key, help_topic=None, suggestion=None, kind='value'):
     label = "Invalid value for option" if kind == 'value' else "Invalid option"
     return VergeMLError(f"{label} '{key}'.", suggestion, help_topic=help_topic,
                         hint_type=kind, hint_key=key)
+
+
+
+def load_yaml_file(filename, label='config file', loader=yaml.Loader):
+    """Load a yaml config file.
+    """
+    try:
+        with open(filename, "r") as file:
+            res = yaml.load(file.read(), Loader=loader) or {}
+            if not isinstance(res, dict):
+                msg = f"Please ensure that {label} consists of key value pairs."
+                raise VergeMLError(f"Invalid {label}: {filename}", msg)
+            return res
+    except yaml.YAMLError as err:
+        if hasattr(err, 'problem_mark'):
+            mark = getattr(err, 'problem_mark')
+            problem = getattr(err, 'problem')
+            message = f"Could not read {label} {filename}:"
+            message += "\n" + display_err_in_file(filename, mark.line, mark.column, problem)
+        elif hasattr(err, 'problem'):
+            problem = getattr(err, 'problem')
+            message = f"Could not read {label} {filename}: {problem}"
+        else:
+            message = f"Could not read {label} {filename}: YAML Error"
+
+        suggestion = f"There is a syntax error in your {label} - please fix it and try again."
+
+        raise VergeMLError(message, suggestion)
+
+    except OSError as err:
+        msg = "Please ensure the file exists and you have the required access privileges."
+        raise VergeMLError(f"Could not open {label} {filename}: {err.strerror}", msg)
 
 
 class _YAMLAnalyzer(yaml.reader.Reader, yaml.scanner.Scanner):

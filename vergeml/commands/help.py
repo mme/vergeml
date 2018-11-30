@@ -134,7 +134,7 @@ Device ID and memory usage can be set on the command line via --device and --dev
 @option('@AI', type='Optional[AI]')
 @option('all', type='Optional[bool]', short="a", flag=True, descr="Show all help topics.")
 class HelpCommand(CommandPlugin):
-    
+
     def __call__(self, args, env):
         _AI, topic = args
         topic = " ".join(topic)
@@ -146,13 +146,13 @@ class HelpCommand(CommandPlugin):
                 print(_TUTORIAL_URL)
         else:
             print(self.get_help(env, topic))
-    
+
     def get_help(self, env=None, topic="", short=False):
 
         if topic:
             model_commands = {}
-            if env and env.model:
-                for fn in Command.find_functions(env.model):
+            if env and env.model_plugin:
+                for fn in Command.find_functions(env.model_plugin):
                     cmd = Command.discover(fn)
                     model_commands[cmd.name] = cmd
 
@@ -165,75 +165,75 @@ class HelpCommand(CommandPlugin):
             # display the glossary
             elif topic == "glossary":
                 return self.format_glossary()
-            
+
             # show available models
             elif topic == "models":
                 return _with_header(self.format_models(),
                                     help="models", topic=topic)
-            
+
             # explain the data.input section
             elif topic == "input":
                 return _with_header(self.format_input_list(),
                                     help="configuration", topic=topic)
-            
+
             # explain the data.cache section
             elif topic == "cache":
                 return _with_header(format_info_text(_CACHE_HELP),
                                     help="configuration", topic=topic)
-            
+
             # explain the data.output section
             elif topic == "output":
                 return _with_header(format_info_text(_OUTPUT_HELP),
                                     help="configuration", topic=topic)
-            
+
             # explain preprocessing
             elif topic in ("preprocess", "preprocessing"):
                 return _with_header(self.format_preprocessing_list(),
                                     help="configuration", topic=topic)
-            
+
             # explain the data section
             elif topic == "data":
                 return _with_header(format_info_text(_DATA_HELP.strip()),
                                     help="configuration", topic=topic)
-            
+
             # explain the device section
             elif topic == "device":
-                return _with_header(format_info_text(_DEVICE_HELP.strip()), 
+                return _with_header(format_info_text(_DEVICE_HELP.strip()),
                                     help="configuration", topic=topic)
-            
+
             # show a random robot
             elif topic == "random robot":
-                robot = ascii_robot(datetime.datetime.now(), 
+                robot = ascii_robot(datetime.datetime.now(),
                                     random_robot_name(datetime.datetime.now()))
                 return f"\n{robot}\n"
-            
+
             elif ":" in topic and topic.split(":", 1)[0] in self.plugins.keys('vergeml.cmd'):
                 command, subcommand = topic.split(":")
                 cmd = Command.discover(self.plugins.get('vergeml.cmd', command))
                 subcommand_option = next(filter(lambda o: bool(o.subcommand), cmd.options), None)
                 if not subcommand_option:
                     raise VergeMLError(f"{command} takes no subcommand", help_topic=command)
-                
+
                 plugin = self.plugins.get(subcommand_option.subcommand, subcommand)
                 if not plugin:
                     raise VergeMLError(f"Invalid {subcommand_option.name}", help_topic=command)
-                
+
                 cmd = Command.discover(plugin)
                 return cmd.usage(short, parent_command=command)
-                
+
             # display model command help
             elif topic in model_commands:
                 return model_commands[topic].usage(short)
-            
+
             # display command help
             elif topic in self.plugins.keys('vergeml.cmd'):
                 cmd = Command.discover(self.plugins.get('vergeml.cmd', topic))
                 return cmd.usage(short)
-            
+
             elif topic in self.plugins.keys('vergeml.operation'):
                 return _with_header(self.format_source_or_operation(topic, 'vergeml.operation', Operation),
                                     help="preprocessing operation", topic=topic)
-            
+
             elif topic in self.plugins.keys('vergeml.io'):
                 return _with_header(self.format_source_or_operation(topic, 'vergeml.io', Source),
                                     help="data source", topic=topic)
@@ -241,18 +241,18 @@ class HelpCommand(CommandPlugin):
             elif topic in self.plugins.keys('vergeml.model'):
                 return _with_header(self.format_model(topic),
                                     help="models", topic=topic)
-            
+
             # show a glossary entry
             elif glossary.long_descr(topic):
                 topic = glossary.SYNONYMS.get(topic, topic)
                 return _with_header(format_info_text(glossary.long_descr(topic)),
                                     help="glossary", topic=topic)
-            
+
             # show base options help
             elif topic in dict(HELP_OPTIONS):
                 return _with_header(format_info_text(dict(HELP_OPTIONS).get(topic)),
                                     help="base options", topic=topic)
-            
+
             else:
                 candidates = set()
                 candidates.update(map(lambda h: h[0], _GENERAL_HELP))
@@ -261,13 +261,13 @@ class HelpCommand(CommandPlugin):
                 candidates.update(self.plugins.keys("vergeml.io"))
                 candidates.update(self.plugins.keys("vergeml.operation"))
                 candidates.update(self.plugins.keys("vergeml.model"))
-                if env and env.model:
-                    for fn in Command.find_functions(env.model):
+                if env and env.model_plugin:
+                    for fn in Command.find_functions(env.model_plugin):
                         cmd = Command.discover(fn)
                         candidates.add(cmd.name)
                 candidates.update(glossary.LONG_DESCR.keys())
                 candidates.update(glossary.SYNONYMS.keys())
-                
+
                 suggestion = did_you_mean(list(candidates), topic)
                 if suggestion:
                     return f"No help found for topic '{topic}'. " + suggestion
@@ -284,16 +284,16 @@ class HelpCommand(CommandPlugin):
         for topic, descr in _GENERAL_HELP:
             print("  {:<16} {}".format(topic, descr), file=buffer)
         print("", file=buffer)
-        
+
         print("Commands:", file=buffer)
         for cmd_name in self.plugins.keys('vergeml.cmd'):
             descr = Command.discover(self.plugins.get('vergeml.cmd', cmd_name)).descr
             print("  {:<16} {}".format(cmd_name, descr), file=buffer)
         print("", file=buffer)
 
-        if env and env.model:
+        if env and env.model_plugin:
             print("Model Commands:", file=buffer)
-            for fn in Command.find_functions(env.model):
+            for fn in Command.find_functions(env.model_plugin):
                 cmd = Command.discover(fn)
                 print("  {:<16} {}".format(cmd.name, cmd.descr), file=buffer)
             print("", file=buffer)
@@ -327,20 +327,20 @@ class HelpCommand(CommandPlugin):
             print(f"{topic} Operations:", file=buffer)
             print(format_info_text(_get_table(v), indent=2), file=buffer)
             print("", file=buffer)
-        
+
         models = []
         for name in self.plugins.keys("vergeml.model"):
             plugin = self.plugins.get('vergeml.model', name)
             model = Model.discover(plugin)
             models.append((name, model.descr))
-        
+
         if models:
             print(_get_table(models), file=buffer)
-        
+
         print ("Glossary:", file=buffer)
         items = ", ".join(glossary.LONG_DESCR.keys())
         print(format_info_text(items, indent=2), file=buffer)
-        
+
         return buffer.getvalue().strip()
 
     def format_glossary(self):
@@ -350,7 +350,7 @@ class HelpCommand(CommandPlugin):
             print(format_info_text(v, indent=2), file=buffer)
             print("", file=buffer)
         return buffer.getvalue().strip()
-    
+
     def format_models(self):
         buffer = io.StringIO()
 
@@ -365,7 +365,7 @@ class HelpCommand(CommandPlugin):
             plugin = self.plugins.get('vergeml.model', name)
             model = Model.discover(plugin)
             models.append((name, model.descr))
-        
+
         print(_get_table(models), file=buffer)
 
         n_models = len(models)
@@ -387,7 +387,7 @@ class HelpCommand(CommandPlugin):
         rng.seed(datetime.datetime.now())
         random_term = rng.choice(list(terms))
 
-        if env and env.model:
+        if env and env.model_plugin:
             print(f"Current Model: {env.get('model')}", file=buffer)
             print("", file=buffer)
 
@@ -402,19 +402,19 @@ class HelpCommand(CommandPlugin):
             print("  {:<16} {}".format(cmd_name, descr), file=buffer)
         print("", file=buffer)
 
-        if env and env.model:
+        if env and env.model_plugin:
             print("Model Commands:", file=buffer)
-            for fn in Command.find_functions(env.model):
+            for fn in Command.find_functions(env.model_plugin):
                 cmd = Command.discover(fn)
                 print("  {:<16} {}".format(cmd.name, cmd.descr), file=buffer)
             print("", file=buffer)
-        
+
         if not short:
             print("See 'ml help <command>' or 'ml help <topic>' to read about a specific subcommand or topic.", file=buffer)
             print(f"For example, try 'ml help {random_term}'", file=buffer)
-            
+
         return buffer.getvalue().strip()
-    
+
     def format_options(self):
         buffer = io.StringIO()
         print(USAGE, file=buffer)
@@ -437,7 +437,7 @@ class HelpCommand(CommandPlugin):
         print("", file=buffer)
         print("For more help on a particular input, see 'ml help <input-name>.'", file=buffer)
         return buffer.getvalue().strip()
-    
+
     def format_preprocessing_list(self):
         buffer = io.StringIO()
 
@@ -463,9 +463,9 @@ class HelpCommand(CommandPlugin):
             print(f"{topic} Operations:", file=buffer)
             print(format_info_text(_get_table(v), indent=2), file=buffer)
             print("", file=buffer)
-        
+
         return buffer.getvalue().strip()
-    
+
     def format_source_or_operation(self, name, group, what):
         op = what.discover(self.plugins.get(group, name))
         buffer = io.StringIO()
@@ -495,7 +495,7 @@ class HelpCommand(CommandPlugin):
         buffer = io.StringIO()
         if model.descr:
             print(format_info_text(model.descr), file=buffer)
-        
+
         if model.long_descr:
             if model.descr:
                 print("", file=buffer)
