@@ -15,10 +15,10 @@ def test_cast_bool():
 
     with pytest.raises(VergeMLError):
         Option(name='bool_option', type=bool).cast_value('falsch') == False
-    
+
     with pytest.raises(VergeMLError):
         Option(name='bool_option', type=bool).cast_value(1) == True
-        
+
 
 def test_cast_int():
     assert Option(name='int_option', type=int).cast_value(1) == 1
@@ -95,7 +95,7 @@ def test_cast_list_float():
 def test_cast_optional():
     assert Option(name='optional_option', type='Optional[str]').cast_value("abc") == "abc"
     assert Option(name='optional_option', type='Optional[str]').cast_value(None) == None
-    
+
 
 def test_cast_union():
     assert Option(name='union_option', type='Union[int,str]').cast_value("abc") == "abc"
@@ -115,16 +115,16 @@ def test_validate_int():
 
     with pytest.raises(VergeMLError):
         Option(name='int_option_7', validate='>=0').validate_value(-1)
-    
+
     with pytest.raises(VergeMLError):
         Option(name='int_option_8', validate='<=0').validate_value(1)
-    
+
     with pytest.raises(VergeMLError):
         Option(name='int_option_9', validate='<0').validate_value(1)
-    
+
     with pytest.raises(VergeMLError):
         Option(name='int_option_10', validate='>0').validate_value(-1)
-    
+
 
 def test_validate_float():
     Option(name='float_option_1', validate='>=0').validate_value(0.1)
@@ -136,13 +136,13 @@ def test_validate_float():
 
     with pytest.raises(VergeMLError):
         Option(name='float_option_7', validate='>=0').validate_value(-0.1)
-    
+
     with pytest.raises(VergeMLError):
         Option(name='float_option_8', validate='<=0').validate_value(0.1)
-    
+
     with pytest.raises(VergeMLError):
         Option(name='float_option_9', validate='<0').validate_value(0.1)
-    
+
     with pytest.raises(VergeMLError):
         Option(name='float_option_10', validate='>0').validate_value(-0.1)
 
@@ -163,7 +163,7 @@ def test_validate_in():
 
     with pytest.raises(VergeMLError, match=r'Invalid value for option in_option\.'):
         Option(name='in_option', type=int, validate=(1,2,3,4,5)).validate_value(6)
-    
+
     Option(name='in_option', type=int, validate=("adam", "sgd")).validate_value("adam")
     with pytest.raises(VergeMLError, match=r'Invalid value for option in_option\.'):
         Option(name='in_option', type=int, validate=("adam", "sgd")).validate_value("sgf")
@@ -171,20 +171,20 @@ def test_validate_in():
 def test_command_1():
     cmd = Command('train', options=[Option('epochs', 20, int, validate='>=1')])
     assert cmd.parse(["train", "--epochs=14"]) == {'epochs': 14}
-    
+
     with pytest.raises(VergeMLError):
         cmd.parse(["train", "--epochs=abc"])
-    
+
     with pytest.raises(VergeMLError):
         cmd.parse(["train", "--epochz=14"])
-    
+
     with pytest.raises(VergeMLError):
         cmd.parse(["train", "--epochs=-1"])
 
 
 def test_command_2():
     cmd = Command('run', options=[Option('<args>', type=list), Option('@AIs', type=list)])
-    assert cmd.parse(["run", "tensorboard"]) == {'@AIs': [], '<args>': ["tensorboard"]} 
+    assert cmd.parse(["run", "tensorboard"]) == {'@AIs': [], '<args>': ["tensorboard"]}
     assert cmd.parse(["@funky-terminator", "run", "tensorboard"]) == \
         {'@AIs': ['funky-terminator'], '<args>': ["tensorboard"]}
     assert cmd.parse(["@funky-terminator", "@touchy-brobot", "run", "tensorboard", "--port=2204"]) == \
@@ -202,7 +202,7 @@ def test_command_4():
     cmd = Command('predict', options=[Option(name="@AI", type="Optional[AI]")])
     assert cmd.parse(["@stubborn-dishwasher", "predict"]) == {'@AI': 'stubborn-dishwasher'}
     assert cmd.parse(["predict"]) == {'@AI': None}
-    
+
 
 def test_command_5():
     options = [
@@ -210,13 +210,13 @@ def test_command_5():
         Option('id', default=False, type=bool, flag=True, short='i')
     ]
     cmd = Command('predict', options=options)
-    assert cmd.parse(["predict", "--threshold=0.2"]) == {'threshold': 0.2}
-    assert cmd.parse(["predict", "-t0.2"]) == {'threshold': 0.2}
+    assert cmd.parse(["predict", "--threshold=0.2"]) == {'threshold': 0.2, 'id': False}
+    assert cmd.parse(["predict", "-t0.2"]) == {'threshold': 0.2, 'id': False}
     assert cmd.parse(["predict", "-t0.2", "--id"]) == {'threshold': 0.2, 'id': True}
     assert cmd.parse(["predict", "-t0.2", "-i"]) == {'threshold': 0.2, 'id': True}
     with pytest.raises(VergeMLError):
         assert cmd.parse(["predict"])
-    
+
 def test_command_6():
     cmd = Command('new', options=[Option(name='<project-name>', type='str')])
     assert cmd.parse(["new", "xxx"]) == {'<project-name>': "xxx"}
@@ -225,14 +225,14 @@ def test_command_6():
 
 
 def test_command_7():
-    cmd = Command('help', options=[Option(name='<topic>'), 
+    cmd = Command('help', options=[Option(name='<topic>'),
                                    Option(name="@AI", type='Optional[AI]')], free_form=True)
     assert cmd.parse(["@funky-robot", "help", "--option=xyz", "something"]) == \
            ('funky-robot', ["--option=xyz", "something"])
-        
+
     assert cmd.parse(["help", "--option=xyz", "something"]) == \
            (None, ["--option=xyz", "something"])
-   
+
 
 USAGE_1 = """
 Usage:
@@ -471,4 +471,3 @@ def test_human_type():
     assert Option(name="x", type='Union[int, str]').human_type() == 'int or string'
     assert Option(name="x", type='Union[int, str, float]').human_type() == 'int, string or float'
     assert Option(name="x", type='float', default=0.001).human_type() == "float, default: 0.001"
-    

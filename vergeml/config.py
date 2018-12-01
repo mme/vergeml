@@ -105,7 +105,7 @@ def _parse_device_grow_memory(res, section):
         res['grow-memory'] = value
 
 
-def parse_data(section, plugins=PLUGINS, cache=None):
+def parse_data(section, cache=None, plugins=PLUGINS):
     """Parse the data section of the config file.
     """
     section = deepcopy(section or {})

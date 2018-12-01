@@ -129,7 +129,7 @@ class Environment:
 
         # merge project file
         if project_file:
-            doc = _load_and_configure(project_file, 'project file', config)
+            doc = self._load_yaml_and_configure(project_file, 'project file', config)
 
             # the project file DOES NOT override values passed to the environment
             for k, val in doc.items():
@@ -162,7 +162,7 @@ class Environment:
 
         self._load_model_plugin(project_file, data_file, model is not None)
 
-        # REVIEW - need a good error message in _load_and_configure
+        # REVIEW - need a good error message in self._load_yaml_and_configure
         # try:
         #     # merge device and data config
         #     self._config.update(apply_config(config, validators))
@@ -260,6 +260,39 @@ class Environment:
             else:
                 # instantiate the model plugin
                 self.model_plugin = self.model_plugin(modelname, self.plugins)
+
+    def _load_yaml_and_configure(self, path, label, config):
+        doc = load_yaml_file(path, label)
+        try:
+            doc['device'] = parse_device(doc.get('device', {}),
+                                         device_id=config.get('device', None),
+                                         device_memory=config.get('device-memory', None))
+
+            doc['data'] = parse_data(doc.get('data', {}), cache=config.get('cache', None),
+                                     plugins=self.plugins)
+
+            if 'random-seed' in doc and not isinstance(doc['random-seed'], int):
+                raise VergeMLError('Invalid value option random-seed.',
+                                   'random-seed must be an integer value.',
+                                   hint_type='value',
+                                   hint_key='random-seed')
+        except VergeMLError as err:
+            if err.hint_key:
+                key, kind = err.hint_key, err.hint_type
+                with open(path) as file:
+                    definition = yaml_find_definition(file, key, kind)
+                if definition:
+                    line, column, length = definition
+                    message = display_err_in_file(path, line, column, str(err), length)
+                    err.message = message
+                    # clear suggestion because it is already contained in the formatted error message.
+                    err.suggestion = None
+                    raise err
+                else:
+                    raise err
+            else:
+                raise err
+        return doc
 
     def get(self, path):
         """Get a value by its path.
@@ -477,37 +510,7 @@ class Environment:
             self._config['data'] = parse_data(self._config.get('data', {}))
 
 
-def _load_and_configure(path, label, config):
-    doc = load_yaml_file(path, label)
-    try:
-        doc['device'] = parse_device(doc.get('device', {}),
-                                     device_id=config.get('device', None),
-                                     device_memory=config.get('device-memory', None))
 
-        doc['data'] = parse_data(doc.get('data', {}), cache=config.get('cache', None))
-
-        if 'random-seed' in doc and not isinstance(doc['random-seed'], int):
-            raise VergeMLError('Invalid value option random-seed.',
-                               'random-seed must be an integer value.',
-                               hint_type='value',
-                               hint_key='random-seed')
-    except VergeMLError as err:
-        if err.hint_key:
-            key, kind = err.hint_key, err.hint_type
-            with open(path) as file:
-                definition = yaml_find_definition(file, key, kind)
-            if definition:
-                line, column, length = definition
-                message = display_err_in_file(path, line, column, str(err), length)
-                err.message = message
-                # clear suggestion because it is already contained in the formatted error message.
-                err.suggestion = None
-                raise err
-            else:
-                raise err
-        else:
-            raise err
-    return doc
 
 def _check_definition(filename, key, kind):
     if not filename:

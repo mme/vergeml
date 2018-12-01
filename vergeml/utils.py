@@ -1,24 +1,19 @@
+"""Utility functions
+"""
 import inspect
-import tempfile
-import os.path
-import urllib.request
 import textwrap
 from collections import namedtuple
-import random
-import numpy as np
-import uuid
-from typing import List
-import yaml
 import re
-import os
-import sys
 
 SPLITS = ('train', 'val', 'test')
 
 
 class VergeMLError(Exception):
+    """System error.
+    """
 
-    def __init__(self, message, suggestion=None, help_topic=None, hint_type=None, hint_key=None):
+    def __init__(self, # pylint: disable=R0913
+                 message, suggestion=None, help_topic=None, hint_type=None, hint_key=None):
         super().__init__(message)
         self.suggestion = suggestion
         self.message = message
@@ -30,13 +25,13 @@ class VergeMLError(Exception):
         if self.suggestion:
             if len(self.message + self.suggestion) < 80:
                 return self.message + " " + self.suggestion
-            else:
-                return self.message + "\n" + self.suggestion
-        else:
-            return self.message
+            return self.message + "\n" + self.suggestion
+        return self.message
 
 
 def wrap_text(text):
+    """Wrap text to be readable in the terminal.
+    """
     # TODO check terminal width
     res = []
     for para in text.split("\n\n"):
@@ -47,14 +42,12 @@ def wrap_text(text):
     return "\n\n".join(res)
 
 
-def print_text(text):
-    print(wrap_text(text))
-
-
 _Intro = namedtuple('_Intro', ['args', 'defaults', 'types'])
 
 
 def introspect(call):
+    """Introspect a function call.
+    """
     spec = inspect.getfullargspec(call)
     args = spec.args
     defaults = dict(zip(reversed(spec.args), reversed(spec.defaults or [])))
@@ -63,17 +56,17 @@ def introspect(call):
 
 
 # taken from here: https://www.python-course.eu/levenshtein_distance.php
-def _iterative_levenshtein(s, t):
+def _iterative_levenshtein(source, targ):
     """
-        iterative_levenshtein(s, t) -> ldist
+        iterative_levenshtein(source, targ) -> ldist
         ldist is the Levenshtein distance between the strings
-        s and t.
+        source and targ.
         For all i and j, dist[i,j] will contain the Levenshtein
-        distance between the first i characters of s and the
-        first j characters of t
+        distance between the first i characters of source and the
+        first j characters of targ
     """
-    rows = len(s)+1
-    cols = len(t)+1
+    rows = len(source)+1
+    cols = len(targ)+1
     dist = [[0 for x in range(cols)] for x in range(rows)]
     # source prefixes can be transformed into empty strings
     # by deletions:
@@ -84,9 +77,11 @@ def _iterative_levenshtein(s, t):
     for i in range(1, cols):
         dist[0][i] = i
 
+    row, col = None, None
+
     for col in range(1, cols):
         for row in range(1, rows):
-            if s[row-1] == t[col-1]:
+            if source[row-1] == targ[col-1]:
                 cost = 0
             else:
                 cost = 1
@@ -94,9 +89,13 @@ def _iterative_levenshtein(s, t):
                                  dist[row][col-1] + 1,      # insertion
                                  dist[row-1][col-1] + cost) # substitution
 
+    assert row and col
     return dist[row][col]
 
+
 def did_you_mean(candidates, value, fmt="'{}'"):
+    """In case of a misspelling, return possible candidates.
+    """
     candidates = list(candidates)
     names = list(sorted(map(lambda n: (_iterative_levenshtein(value, n), n), candidates)))
     names = list(filter(lambda dn: dn[0] <= 2, names))
@@ -104,45 +103,55 @@ def did_you_mean(candidates, value, fmt="'{}'"):
 
 
 def dict_set_path(dic, path, value):
+    """Set the value of a dict using path syntax.
+    """
     cur = dic
     path = path.split(".")
     for key in path[:-1]:
-        cur = cur.setdefault( key, {} )
+        cur = cur.setdefault(key, {})
     cur[path[-1]] = value
 
-def dict_del_path(d, path):
+def dict_del_path(dic, path):
+    """Delete a value from a dict using path syntax.
+    """
     if isinstance(path, str):
         path = path.split(".")
     if len(path) == 1:
-        del[d[path[0]]]
+        del[dic[path[0]]]
     else:
-        p, *rest = path
-        dict_del_path(d[p], rest)
-        if not d[p]:
-            del d[p]
+        pat, *rest = path
+        dict_del_path(dic[pat], rest)
+        if not dic[pat]:
+            del dic[pat]
 
-def dict_has_path(d, path):
-    c = d
-    for p in path.split("."):
-        if isinstance(c, dict) and p in c:
-            c = c[p]
+def dict_has_path(dic, path):
+    """Check if a dict contains a value using path syntax.
+    """
+    cur = dic
+    for pat in path.split("."):
+        if isinstance(cur, dict) and pat in cur:
+            cur = cur[pat]
         else:
             return False
     return True
 
 _DEFAULT = object()
-def dict_get_path(d, path, default=_DEFAULT):
-    c = d
-    for p in path.split("."):
-        if isinstance(c, dict) and p in c:
-            c = c[p]
+def dict_get_path(dic, path, default=_DEFAULT):
+    """Get the value of a dict using path syntax.
+    """
+    cur = dic
+    for pat in path.split("."):
+        if isinstance(cur, dict) and pat in cur:
+            cur = cur[pat]
         elif default != _DEFAULT:
             return default
         else:
             raise KeyError(path)
-    return c
+    return cur
 
 def dict_merge(dict1, dict2):
+    """Merge two dicts.
+    """
     if not isinstance(dict1, dict) or not isinstance(dict2, dict):
         return dict2
     for k in dict2:
@@ -152,21 +161,23 @@ def dict_merge(dict1, dict2):
             dict1[k] = dict2[k]
     return dict1
 
-def dict_paths(d, path=None):
+def dict_paths(dic, path=None):
+    """Get paths in a dict.
+    """
     res = []
     if path:
-        if not dict_has_path(d, path):
+        if not dict_has_path(dic, path):
             return res
-        value = dict_get_path(d, path)
+        value = dict_get_path(dic, path)
     else:
-        value = d
-    if not isinstance(d, dict):
+        value = dic
+    if not isinstance(dic, dict):
         return res
-    def _collect_path(d, path):
-        for k, v in d.items():
+    def _collect_path(dic, path):
+        for k, val in dic.items():
             npath = f"{path}.{k}" if path is not None else k
-            if isinstance(v, dict):
-                _collect_path(v, npath)
+            if isinstance(val, dict):
+                _collect_path(val, npath)
             else:
                 res.append(npath)
     _collect_path(value, path)
@@ -174,6 +185,8 @@ def dict_paths(d, path=None):
 
 
 def parse_trained_models(argv):
+    """Parse @syntax for specifying trained models on the command line.
+    """
     names = []
     for part in argv:
         if re.match("^@[a-zA-Z0-9_-]+$", part):
@@ -192,14 +205,15 @@ def parse_split(value):
 
     if isinstance(value, int):
         return ('num', value)
-    elif value.endswith("%"):
+    if value.endswith("%"):
         return ('perc', float(value.rstrip("%").strip()))
-    elif value.isdigit():
+    if value.isdigit():
         return ('num', int(value))
-    else:
-        return ('dir', value)
+    return ('dir', value)
 
 def format_info_text(text, indent=0, width=70):
+    """Return text formatted for readability.
+    """
     text = text.strip("\n")
     res = []
     for line in text.splitlines():
