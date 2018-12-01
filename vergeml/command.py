@@ -189,7 +189,8 @@ class Command: # pylint: disable=R0902
         assert len(at_option) <= 1, "Can only have one @option."
         if at_option:
             at_option = at_option[0]
-            assert at_option.type in (None, 'AI', 'Optional[AI]', 'List[AI]', list, str)
+            assert at_option.has_type(None, list, '@', 'Optional[@]', 'List[@]')
+
         arg_param = list(filter(lambda o: o.is_argument_option(), options))
         assert len(arg_param) <= 1, "Can only have one argument parameter."
 
@@ -269,7 +270,7 @@ class Command: # pylint: disable=R0902
     def _usage_command(self, opt, parent_command):
         result = ""
         if opt['at']:
-            if opt['at'].type in (list, 'List[AI]'):
+            if opt['at'].has_type(list, 'List[@]'):
                 result += f" [{opt['at'].name} ...]"
             elif opt['at'].is_optional():
                 result += f" [{opt['at'].name}]"
@@ -342,7 +343,7 @@ class Command: # pylint: disable=R0902
         opt_descr = []
 
         if opt['at']:
-            if opt['at'].type in (list, 'List[AI]'):
+            if opt['at'].has_type(list, 'List[@]'):
                 opt_descr.append((opt['at'].name, "A list of trained models."))
             else:
                 opt_descr.append((opt['at'].name, "The name of a trained model."))
@@ -435,11 +436,11 @@ class Command: # pylint: disable=R0902
         at_opt = next((filter(lambda o: o.is_at_option(), self.options)), None)
 
         if at_opt:
-            if at_opt.type in ('AI', None, str):
+            if at_opt.has_type('@', None):
                 at_conf = 'required'
-            elif at_opt.type == 'Optional[AI]':
+            elif at_opt.has_type('Optional[@]'):
                 at_conf = 'optional'
-            elif at_opt.type in (list, 'list', 'List[AI]'):
+            elif at_opt.has_type(list, 'List[@]'):
                 at_conf = 'list'
         else:
             at_conf = 'none'

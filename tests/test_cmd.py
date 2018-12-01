@@ -201,7 +201,7 @@ class CommandTest2(CommandPlugin):
 
 @command(free_form=True)
 @option('<topic>', type=str)
-@option('@AI', type='Optional[AI]')
+@option('@AI', type='Optional[@]')
 class CommandTest3(CommandPlugin):
     def __call__(self, args, env):
         return args
