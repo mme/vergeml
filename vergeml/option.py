@@ -58,7 +58,6 @@ def option(name, default=None, descr=None, type=None, validate=None, transform=N
         """
 
 
-
     def decorator(o):
         if o.__name__ not in ('ValidateDevice', 'ValidateData'):
             assert name not in _RESERVED_OPTION_NAMES, "Invalid option name: {} - name is reserved.".format(name)
@@ -114,6 +113,15 @@ class Option:
         self.name = name
         self.default = default
 
+        # as a shortcut, type can be a string.
+        if isinstance(type, str):
+
+            # @ is a shortcut for a trained model
+            type = type.replace("@", "TrainedModel")
+
+            # convert the string to an object representing the type
+            type = eval(type) # pylint: disable=W0123
+
         self.type = type
         if not self.type and default is not None:
             self.type = builtins.type(default)
@@ -147,9 +155,14 @@ class Option:
     def has_type(self, *types):
         """Check if the option is of a type in the list types"""
         for typ in types:
-            typ_ = eval(typ) if isinstance(typ, str) else typ # pylint: disable=W0123
-            if self.type == typ_:
+
+            if isinstance(typ, str):
+                typ = typ.replace('@', 'TrainedModel')
+                typ = eval(typ) # pylint: disable=W0123
+
+            if self.type == typ:
                 return True
+
         return False
 
     def validate_value(self, value):
@@ -325,40 +338,37 @@ class Option:
 
     def _type_descr(self, tp):
         tp_descr = ""
-        if isinstance(tp, str):
-            if tp == 'AI':
-                tp_descr = "AI"
-            elif tp == 'Optional[AI]':
-                tp_descr = "optional AI"
-            elif tp == "file":
-                tp_descr = "file"
-            elif tp == "Optional[file]":
-                tp_descr = "optional file"
-            elif tp == "List[file]":
-                tp_descr = "a list of files"
-            else:
-                tp = eval(tp)
 
-        if not tp_descr:
-            if hasattr(tp, '__origin__'):
-                if tp.__origin__ in (list, List):
-                    tp_descr = "a list of " + self._type_descr(tp.__args__[0])
-                elif tp.__origin__ == Union:
-                    if len(tp.__args__) == 2 and type(None) in tp.__args__:
-                        other = list(filter(lambda t: not isinstance(t, type(None)), tp.__args__))[0]
-                        tp_descr = 'optional ' + self._type_descr(other)
-                    else:
-                        names = [self._type_descr(t) for t in tp.__args__]
-                        if len(names) <= 2:
-                            tp_descr = " or ".join(names)
-                        else:
-                            tp_descr = ", ".join(names[:-1])
-                            tp_descr += " or " + names[-1]
-            elif tp:
-                if tp == str:
-                    tp_descr = "string"
+        if tp == TrainedModel:
+            tp_descr = "trained model"
+        elif tp == Optional[TrainedModel]:
+            tp_descr = "optional trained model"
+        elif tp == File:
+            tp_descr = "file"
+        elif tp == Optional[File]:
+            tp_descr = "optional file"
+        elif tp == List[File]:
+            tp_descr = "a list of files"
+
+        elif hasattr(tp, '__origin__'):
+            if tp.__origin__ in (list, List):
+                tp_descr = "a list of " + self._type_descr(tp.__args__[0])
+            elif tp.__origin__ == Union:
+                if len(tp.__args__) == 2 and type(None) in tp.__args__:
+                    other = list(filter(lambda t: not isinstance(t, type(None)), tp.__args__))[0]
+                    tp_descr = 'optional ' + self._type_descr(other)
                 else:
-                    tp_descr = getattr(tp, '__name__', str(tp))
+                    names = [self._type_descr(t) for t in tp.__args__]
+                    if len(names) <= 2:
+                        tp_descr = " or ".join(names)
+                    else:
+                        tp_descr = ", ".join(names[:-1])
+                        tp_descr += " or " + names[-1]
+        elif tp:
+            if tp == str:
+                tp_descr = "string"
+            else:
+                tp_descr = getattr(tp, '__name__', str(tp))
         return tp_descr
 
     def human_type(self):

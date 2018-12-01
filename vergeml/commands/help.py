@@ -131,7 +131,7 @@ Device ID and memory usage can be set on the command line via --device and --dev
 
 @command('help', descr="Get general help or specific help for a command.", free_form=True)
 @option('<topic>', type=Optional[str], descr="The topic to get help on.")
-@option('@AI', type='Optional[AI]')
+@option('@AI', type='Optional[@]')
 @option('all', type='Optional[bool]', short="a", flag=True, descr="Show all help topics.")
 class HelpCommand(CommandPlugin):
 

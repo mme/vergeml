@@ -199,7 +199,7 @@ def test_command_3():
 
 
 def test_command_4():
-    cmd = Command('predict', options=[Option(name="@AI", type="Optional[AI]")])
+    cmd = Command('predict', options=[Option(name="@AI", type="Optional[@]")])
     assert cmd.parse(["@stubborn-dishwasher", "predict"]) == {'@AI': 'stubborn-dishwasher'}
     assert cmd.parse(["predict"]) == {'@AI': None}
 
@@ -224,7 +224,7 @@ def test_command_6():
 
 def test_command_7():
     cmd = Command('help', options=[Option(name='<topic>'),
-                                   Option(name="@AI", type='Optional[AI]')], free_form=True)
+                                   Option(name="@AI", type='Optional[@]')], free_form=True)
     assert cmd.parse(["@funky-robot", "help", "--option=xyz", "something"]) == \
            ('funky-robot', ["--option=xyz", "something"])
 
@@ -378,7 +378,7 @@ Options:
 """.strip()
 def test_command_usage10():
     cmd = Command('predict', options=[
-        Option(name='@AI', type="Optional[AI]"),
+        Option(name='@AI', type="Optional[@]"),
         Option(name='threshold', default=0.2, descr="Prediction Threshold.")
     ])
     assert cmd.usage() == USAGE_10
@@ -393,7 +393,7 @@ Options:
 """.strip()
 def test_command_usage11():
     cmd = Command('predict', options=[
-        Option(name='@AIs', type="List[AI]"),
+        Option(name='@AIs', type="List[@]"),
         Option(name='threshold', default=0.2, descr="Prediction Threshold.")
     ])
     assert cmd.usage() == USAGE_11
@@ -410,7 +410,7 @@ Options:
 """.strip()
 def test_command_usage12():
     cmd = Command('predict', long_descr="Make a prediction.", options=[
-        Option(name='@AIs', type="List[AI]"),
+        Option(name='@AIs', type="List[@]"),
         Option(name='threshold', default=0.2, descr="Prediction Threshold.")
     ])
     assert cmd.usage() == USAGE_12
@@ -430,7 +430,7 @@ Examples:
 """.strip()
 def test_command_usage13():
     cmd = Command('predict', long_descr="Make a prediction.", examples="ml @skynet predict", options=[
-        Option(name='@AIs', type="List[AI]"),
+        Option(name='@AIs', type="List[@]"),
         Option(name='threshold', default=0.2, descr="Prediction Threshold.")
     ])
     assert cmd.usage() == USAGE_13
@@ -447,7 +447,7 @@ Options:
 """.strip()
 def test_command_usage14():
     cmd = Command('predict', descr="Make a prediction.", options=[
-        Option(name='@AIs', type="List[AI]"),
+        Option(name='@AIs', type="List[@]"),
         Option(name='threshold', default=0.2, descr="Prediction Threshold.")
     ])
     assert cmd.usage() == USAGE_14
@@ -459,10 +459,10 @@ def test_human_type():
     assert Option(name="x", type='str').human_type() == "string"
     assert Option(name="x").human_type() == ""
     assert Option(name="x", type=list).human_type() == "list"
-    assert Option(name="x", type="AI").human_type() == "AI"
-    assert Option(name="x", type="Optional[AI]").human_type() == "optional AI"
-    assert Option(name="x", type="file").human_type() == "file"
-    assert Option(name="x", type="Optional[file]").human_type() == "optional file"
+    assert Option(name="x", type="@").human_type() == "trained model"
+    assert Option(name="x", type="Optional[@]").human_type() == "optional trained model"
+    assert Option(name="x", type="File").human_type() == "file"
+    assert Option(name="x", type="Optional[File]").human_type() == "optional file"
     assert Option(name="x", type='int', validate='>=2').human_type() == "int >=2"
     assert Option(name="x", type='Optional[int]').human_type() == 'optional int'
     assert Option(name="x", type='Union[int, None]').human_type() == 'optional int'
