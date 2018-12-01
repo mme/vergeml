@@ -34,7 +34,6 @@ def test_input_shortcut_1():
         'input': {
             'type': 'image',
             'input-patterns': ['**/*.jpg', '**/*.jpeg', '**/*.png', '**/*.bmp']},
-        'output': None,
         'cache': '*auto*',
         'preprocess': []
     }
@@ -46,7 +45,6 @@ def test_input_shortcut_2():
         'input': {
             'type': 'image',
             'input-patterns': ['**/*.jpg', '**/*.jpeg', '**/*.png', '**/*.bmp']},
-        'output': None,
         'cache': '*auto*',
         'preprocess': []
     }
@@ -69,8 +67,6 @@ def test_validate_preprocess():
     plugins = _DictPluginManager()
     plugins.set('vergeml.operation', 'augment', AugmentOperation)
     assert parse_data({'preprocess': [{'op': 'augment', 'variants': 4}]}) == {
-        'input': None,
-        'output': None,
         'cache': '*auto*',
         'preprocess': [{'op': 'augment', 'variants': 4}]
     }
@@ -159,7 +155,6 @@ def test_apply_config_image():
             'type': 'image',
             'input-patterns': ['*.jpg']
         },
-        'output': None,
         'cache': '*auto*',
         'preprocess': []
     }

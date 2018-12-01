@@ -269,7 +269,7 @@ Usage:
   ml @AI predict [options]
 
 Options:
-  @AI            The name of a trained AI.
+  @AI            The name of a trained model.
   --threshold    Prediction Threshold. [default: 0.2]
 """.strip()
 def test_command_usage4():
@@ -373,7 +373,7 @@ Usage:
   ml [@AI] predict [options]
 
 Options:
-  @AI            The name of a trained AI.
+  @AI            The name of a trained model.
   --threshold    Prediction Threshold. [default: 0.2]
 """.strip()
 def test_command_usage10():
@@ -388,7 +388,7 @@ Usage:
   ml [@AIs ...] predict [options]
 
 Options:
-  @AIs           A list of trained AIs.
+  @AIs           A list of trained models.
   --threshold    Prediction Threshold. [default: 0.2]
 """.strip()
 def test_command_usage11():
@@ -405,7 +405,7 @@ Usage:
   ml [@AIs ...] predict [options]
 
 Options:
-  @AIs           A list of trained AIs.
+  @AIs           A list of trained models.
   --threshold    Prediction Threshold. [default: 0.2]
 """.strip()
 def test_command_usage12():
@@ -422,7 +422,7 @@ Usage:
   ml [@AIs ...] predict [options]
 
 Options:
-  @AIs           A list of trained AIs.
+  @AIs           A list of trained models.
   --threshold    Prediction Threshold. [default: 0.2]
 
 Examples:
@@ -442,7 +442,7 @@ Usage:
   ml [@AIs ...] predict [options]
 
 Options:
-  @AIs           A list of trained AIs.
+  @AIs           A list of trained models.
   --threshold    Prediction Threshold. [default: 0.2]
 """.strip()
 def test_command_usage14():
