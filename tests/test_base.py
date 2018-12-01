@@ -214,8 +214,6 @@ def test_command_5():
     assert cmd.parse(["predict", "-t0.2"]) == {'threshold': 0.2, 'id': False}
     assert cmd.parse(["predict", "-t0.2", "--id"]) == {'threshold': 0.2, 'id': True}
     assert cmd.parse(["predict", "-t0.2", "-i"]) == {'threshold': 0.2, 'id': True}
-    with pytest.raises(VergeMLError):
-        assert cmd.parse(["predict"])
 
 def test_command_6():
     cmd = Command('new', options=[Option(name='<project-name>', type='str')])
