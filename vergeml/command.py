@@ -476,7 +476,7 @@ class Command: # pylint: disable=R0902
 
             # Prepare getopt syntax for long options.
             if opt.flag:
-                assert opt.type.has_type(str, bool)
+                assert opt.has_type(str, bool)
                 longopts.append(opt.name)
             else:
                 longopts.append(opt.name + "=")
