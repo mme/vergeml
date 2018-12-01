@@ -45,26 +45,26 @@ class _CommandCallProxy:
 
             # Set missing args from default
             for opt in cmd.options:
-                if opt.name not in args and (opt.default is not None or not opt.is_required()):
-                    args[opt.name] = opt.default
+                if opt.name not in fn_args and (opt.default is not None or not opt.is_required()):
+                    fn_args[opt.name] = opt.default
 
             # When required arguments are missing now, raise an error
             for opt in cmd.options:
-                if opt.is_required() and opt.name not in args:
+                if opt.is_required() and opt.name not in fn_args:
 
                     # TODO show --name only when called via the command line
-                    raise VergeMLError('Missing argument --{opt.name}.', help_topic=cmd.name)
+                    raise VergeMLError(f'Missing argument --{opt.name}.', help_topic=cmd.name)
 
         # Set up defaults for the command. This will also give models a chance
         # to alter the configuration of the environment before command
         # execution.
 
-        env.set_defaults(cmd.name, args)
+        env.set_defaults(cmd.name, fn_args)
 
         # REVIEW
         # When training, this is a good time to save the original configuration.
 
-        return fun(args, env)
+        return fun(fn_args, env)
 
     @staticmethod
     def class_wrapper(klass, name):
@@ -254,11 +254,11 @@ class Command: # pylint: disable=R0902
 
         for option in self.options:
             if option.is_at_option():
-                res['at_option'] = option
+                res['at'] = option
             elif option.is_argument_option():
-                res['argument_option'] = option
+                res['arg'] = option
             elif bool(option.subcommand):
-                res['subcommand_option'] = option
+                res['sub'] = option
             elif option.is_optional():
                 res['optional'].append(option)
             else:
@@ -526,7 +526,7 @@ class Command: # pylint: disable=R0902
             (extra_conf == 'none' and extra):
             raise _invalid_arguments(help_topic=self.name)
 
-        elif extra_conf == 'required' and extra:
+        elif extra_conf == 'required' and not extra:
             raise _invalid_arguments(f"Missing argument {arg_option.name}.", help_topic=self.name)
 
         elif extra_conf == 'required' and len(extra) > 1:
