@@ -1,34 +1,38 @@
+"""Code for running from the command line.
+"""
+
 import sys
-from vergeml.utils import VergeMLError, parse_trained_models
-from vergeml import __version__
-from vergeml.env import Environment
-from vergeml.plugins import PLUGINS
-from vergeml.command import Command
 import os.path
 import logging
 import getopt
 import re
-from copy import deepcopy
+from copy import deepcopy, copy
+
+from vergeml import __version__
+from vergeml.utils import VergeMLError, parse_trained_models
+from vergeml.env import Environment
+from vergeml.plugins import PLUGINS
+from vergeml.command import Command
 from vergeml.commands.help import HelpCommand
 from vergeml.utils import did_you_mean
-from vergeml.libraries import KerasLibrary, TensorFlowLibrary, TorchLibrary, NumPyLibrary, PythonInterpreter, CudaLibrary
-from copy import copy
+from vergeml.libraries import KerasLibrary, TensorFlowLibrary, TorchLibrary
+from vergeml.libraries import NumPyLibrary, PythonInterpreter, CudaLibrary
 
 
-def _parsebase(argv, plugins=PLUGINS):
-    """Parse up until the second part of the command.
+def _parsebase(argv):
+    """Parse until the second part of the command.
     """
     shortopts = 'vf:m:' # version, file, model
-    longopts = ['version', 'file=', 'model=', 'samples-dir=', 'test-split=', 'val-split=', 'cache-dir=', 'random-seed=',
-                'trainings-dir=', 'project-dir=']
+    longopts = ['version', 'file=', 'model=', 'samples-dir=', 'test-split=', 'val-split=',
+                'cache-dir=', 'random-seed=', 'trainings-dir=', 'project-dir=',
+                'cache=', 'device=', 'device-memory=']
 
-    configopts = [('device-memory', 'device.memory'), ('device', 'device'), ('cache', 'data.cache')]
-
-    args, rest = getopt.getopt(argv, shortopts, longopts + list(map(lambda o: o[0] + "=", configopts)))
+    args, rest = getopt.getopt(argv, shortopts, longopts)
 
     args = dict(args)
     # don't match prefix
     for opt in map(lambda s: s.rstrip("="), longopts):
+        # pylint: disable=W0640
         if ''f'--{opt}' in args and not any(map(lambda a: a.startswith('--' + opt), argv)):
             # find the key that does not match
             keys = map(lambda a: a.split("=")[0].lstrip("-"), argv)
@@ -38,33 +42,18 @@ def _parsebase(argv, plugins=PLUGINS):
             else:
                 raise getopt.GetoptError('Invalid key')
 
+    # convert from short to long names
+    for sht, lng in (('-v', '--version'), ('-m', '--model'), ('-f', '--file')):
+        if sht in args:
+            args[lng] = args[sht]
+            del args[sht]
 
-    for s, l in (('-v', '--version'), ('-m', '--model'), ('-f', '--file')):
-        if s in args:
-            args[l] = args[s]
-            del args[s]
+    args = {k.strip('-'):v for k, v in args.items()}
 
-    # partition into base and config options
-    base_args, config_args = {}, {}
-    longopts_ = list(map(lambda o: o.rstrip("="), longopts))
-    configoptsd = dict(configopts)
-    for k,v in args.items():
-        if v.startswith('-'):
-            try:
-                float(v)
-            except ValueError:
-                raise getopt.GetoptError('Invalid value')
-        k_ = k.lstrip('-').rstrip('=')
-        if k_ in longopts_:
-            base_args[k_] = v
-        else:
-            config_args[configoptsd[k_]] = v
-
-    # print(config_args)
-    return base_args, config_args, rest
+    return args, rest
 
 
-def _env_from_args(args, config, AI, plugins=PLUGINS):
+def _env_from_args(args, AI, plugins=PLUGINS):
     args = deepcopy(args)
     # replace hyphen with underscore for python
     args = {k.replace('-', '_'):v for k,v in args.items()}
@@ -72,7 +61,6 @@ def _env_from_args(args, config, AI, plugins=PLUGINS):
     if AI:
         args['AI'] = AI
 
-    args['config'] = config
     args['is_global_instance'] = True
     args['plugins'] = plugins
 
@@ -103,11 +91,31 @@ def _prepare_args(args):
                                "--random-seed must be an integer value.",
                                ('value', 'random-seed'))
 
+    cache_opts = ('none', 'disk', 'mem', 'disk-in', 'mem-in')
+
+    if 'cache' in args:
+        if args['cache'] not in cache_opts:
+            raise VergeMLError("Invalid value for --cache.",
+                               "Must be one of: " + ", ".join(cache_opts),
+                               help_topic='cache')
+
+    if 'device' in args:
+        if not re.match(r"^(gpu:[0-9]+|gpu|cpu|\*auto\*)", args['device']):
+            raise VergeMLError("Invalid value for --device.",
+                               "Please specify a valid device, e.g gpu:0 or cpu.",
+                               help_topic='device')
+
+    if 'device-memory' in args:
+        if not re.match(r"(([1-9]?[0-9]|100)%|(0\.[0-9]+)|1\.0)|\*auto\*", args['device-memory']):
+            raise VergeMLError("Invalid value for --device-memory.",
+                               "Please specify device memory as a percentage, e.g. 100%.",
+                               help_topic='device')
+
     return args
 
 _VERGEML_OPTION_NAMES = {
-    'version', 'file', 'model', 'samples-dir', 'val-split', 'test-split', 'cache-dir', 'random-seed',
-    'trainings-dir', 'project-dir', 'cache', 'device', 'device-memory'
+    'version', 'file', 'model', 'samples-dir', 'val-split', 'test-split', 'cache-dir',
+    'random-seed', 'trainings-dir', 'project-dir', 'cache', 'device', 'device-memory'
 }
 
 def _forgive_wrong_option_order(argv):
@@ -143,7 +151,7 @@ def _forgive_wrong_option_order(argv):
 def run(argv, plugins=PLUGINS):
     try:
         argv = _forgive_wrong_option_order(argv)
-        args, config, rest = _parsebase(argv, plugins=plugins)
+        args, rest = _parsebase(argv)
     except getopt.GetoptError as err:
         if err.opt:
             opt = err.opt.lstrip("-")
@@ -161,7 +169,7 @@ def run(argv, plugins=PLUGINS):
 
     AI = next(iter(ai_names), None)
 
-    env = _env_from_args(args, config, AI, plugins=plugins)
+    env = _env_from_args(args, AI, plugins=plugins)
 
     if after_names:
         cmdname = after_names.pop(0)
@@ -185,7 +193,7 @@ def run(argv, plugins=PLUGINS):
     if not plugin:
         # collect all possible command names
         command_names = set(plugins.keys('vergeml.cmd'))
-        if env.model:
+        if env.model_plugin:
             model_commands = set(map(lambda f:Command.discover(f).name, Command.find_functions(env.model_plugin)))
             command_names.update(model_commands)
 
