@@ -195,7 +195,6 @@ class Option:
     def cast_value(self, value, type_=None): # pylint: disable=R0915,R0911,R0912
         """Cast value to the type of option.
         """
-
         type_ = type_ or self.type
 
         if not type_:
