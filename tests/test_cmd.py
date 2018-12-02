@@ -8,20 +8,16 @@ import getopt
 import os.path
 
 def test_parse_base_version():
-    args, _, _ = _parsebase(['-v'])
+    args, _ = _parsebase(['-v'])
     assert 'version' in args
 
-    args, _, _ = _parsebase(['--version'])
+    args, _ = _parsebase(['--version'])
     assert 'version' in args
 
 def test_parse_short_args():
-    args, _, rest = _parsebase(['-m', 'inception-v3', '--random-seed=42', 'train'])
+    args, rest = _parsebase(['-m', 'inception-v3', '--random-seed=42', 'train'])
     assert args == {'model': 'inception-v3', 'random-seed': '42'}
     assert rest == ['train']
-    
-def test_invalid_input():
-    with pytest.raises(getopt.GetoptError):
-        _parsebase(['-m', '--random-seed', '42'])
 
 def test_invalid_opt():
     with pytest.raises(getopt.GetoptError):
@@ -30,19 +26,18 @@ def test_invalid_opt():
         _parsebase(['--test=10%'])
 
 def test_config_plugin():
-    args, config_args, _ = _parsebase(['--device=gpu', '--device-memory=20%'])
-    assert(args == {})
-    assert(config_args == {'device': 'gpu', 'device.memory': '20%'})
+    args, _ = _parsebase(['--device=gpu', '--device-memory=20%'])
+    assert(args == {'device': 'gpu', 'device-memory': '20%'})
     with pytest.raises(getopt.GetoptError):
         _parsebase(['--device-id=gpu', '--device-memory=20%'])
 
 def test_random_seed():
     args = _prepare_args({'random-seed': '1234'})
     assert args['random-seed'] == 1234
-    
+
     with pytest.raises(VergeMLError):
         _prepare_args({'random-seed': 'xyz'})
-    
+
 def test_env_from_args():
     default_env = _env_from_args({}, {}, None)
     assert default_env
@@ -78,9 +73,9 @@ def test_env_from_project_file_invalid_config(tmpdir):
     d1 = tmpdir.mkdir("p1")
     p1 = d1.join("vergeml.yaml")
     p1.write("data:\n  inputz: images")
-    with pytest.raises(VergeMLError, match=r".*Invalid option 'data.inputz'. Did you mean 'data.input'.*"):
+    with pytest.raises(VergeMLError, match=r".*Invalid option 'data.inputz'. Did you mean 'input'.*"):
         _env_from_args({'project-file': str(p1)}, {}, None)
-   
+
 def test_run_command_options():
     PLUGINS = _DictPluginManager()
     PLUGINS.set('vergeml.cmd', 'test', CommandTest)
@@ -120,16 +115,16 @@ def test_command_line_overrides_project_file_option(tmpdir):
     p1 = d1.join("vergeml.yaml")
     p1.write("train:\n  learning-rate: 0.002")
     assert run(["-f"+str(p1), "train", "--learning-rate=0.1"], plugins=PLUGINS) == {'learning-rate': 0.1}
- 
+
 def test_project_file_wrong_key(tmpdir):
     PLUGINS = _DictPluginManager()
     PLUGINS.set('vergeml.cmd', 'train', CommandTest2)
     d1 = tmpdir.mkdir("p1")
     p1 = d1.join("vergeml.yaml")
     p1.write("train:\n  learning-rates: 0.002")
-    with pytest.raises(VergeMLError, match="Invalid option 'train.learning-rates'. Did you mean 'train.learning-rate'"):
+    with pytest.raises(VergeMLError, match="Invalid option 'train.learning-rates'. Did you mean 'learning-rate'"):
         run(["-f"+str(p1), "train", "--learning-rate=0.1"], plugins=PLUGINS)
- 
+
 def test_command_line_overrides_project_file_option_device(tmpdir):
     PLUGINS = _DictPluginManager()
     PLUGINS.set('vergeml.cmd', 'train', CommandTest2)
@@ -158,10 +153,10 @@ def test_run_invalid_data_config(tmpdir):
     PLUGINS.set('vergeml.cmd', 'train', CommandTest2)
     d1 = tmpdir.mkdir("p1")
     p1 = d1.join("vergeml.yaml")
-    p1.write("data:\n  input: images")
-    with pytest.raises(VergeMLError, match=r".*line 2:10.*"):
+    p1.write("data:\n  input:\n    type: images")
+    with pytest.raises(VergeMLError, match=r".*line 3:11.*"):
         run(["-f"+str(p1), "train", "--learning-rate=0.0001"], plugins=PLUGINS)
-    
+
 def test_invalid_config_output(tmpdir, capsys):
     PLUGINS = _DictPluginManager()
     PLUGINS.set('vergeml.cmd', 'help', CommandTest3)
@@ -171,7 +166,7 @@ def test_invalid_config_output(tmpdir, capsys):
     main(["-f"+str(p1), "help"], plugins=PLUGINS)
     err = capsys.readouterr().err
 
-    assert "Did you mean 'data.input'" in err
+    assert "Did you mean 'input'" in err
     assert "See 'ml help data'" in err
 
 def test_command_line_overrides_project_file_option_trainings_dir(tmpdir):
@@ -201,7 +196,7 @@ class CommandTest2(CommandPlugin):
 
 @command(free_form=True)
 @option('<topic>', type=str)
-@option('@AI', type='Optional[AI]')
+@option('@AI', type='Optional[@]')
 class CommandTest3(CommandPlugin):
     def __call__(self, args, env):
         return args

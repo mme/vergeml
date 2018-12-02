@@ -8,7 +8,7 @@ from vergeml.utils import VergeMLError
 import numpy as np
 
 @command('confusion-matrix', descr="Plot a confusion matrix.")
-@option('@AI', type='AI')
+@option('@AI')
 @option('normalize', type='bool', default=False, descr="When true normalize the confusion matrix.", short="n", flag=True)
 class ConfusionMatrixPlot(CommandPlugin):
 
@@ -27,7 +27,7 @@ class ConfusionMatrixPlot(CommandPlugin):
             labels = load_labels(env)
         except FileNotFoundError:
             raise VergeMLError("Can't plot confusion matrix - not supported by model.")
-        
+
         nclasses = len(labels)
 
         try:
@@ -37,7 +37,7 @@ class ConfusionMatrixPlot(CommandPlugin):
 
         # From:
         # https://scikit-learn.org/stable/auto_examples/model_selection/plot_confusion_matrix.html#sphx-glr-auto-examples-model-selection-plot-confusion-matrix-py
-       
+
         def plot_confusion_matrix(cm, classes, AI,
                                   normalize=False,
                                   cmap=plt.cm.Blues): # pylint: disable=E1101
@@ -52,7 +52,7 @@ class ConfusionMatrixPlot(CommandPlugin):
                 plt.title(f'Confusion matrix for @{AI}')
 
             plt.imshow(cm, interpolation='nearest', cmap=cmap)
-            
+
             plt.colorbar()
             tick_marks = np.arange(len(classes))
             plt.xticks(tick_marks, classes, rotation=45)
@@ -68,7 +68,7 @@ class ConfusionMatrixPlot(CommandPlugin):
             plt.ylabel('True label')
             plt.xlabel('Predicted label')
             plt.tight_layout()
-        
+
         y_test = np.argmax(y_test, axis=1)
         y_pred = np.argmax(y_score, axis=1)
         cnf_matrix = confusion_matrix(y_test, y_pred)

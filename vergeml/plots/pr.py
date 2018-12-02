@@ -8,7 +8,7 @@ from vergeml.utils import VergeMLError
 import numpy as np
 
 @command('pr', descr="Plot a precision/recall curve.")
-@option('@AI', type='AI')
+@option('@AI')
 @option('class', type='str', descr="The positive class.")
 
 # TODO add plots for multi label
@@ -26,19 +26,19 @@ class PRPlot(CommandPlugin):
             labels = load_labels(env)
         except FileNotFoundError:
             raise VergeMLError("Can't plot PR curve - not supported by model.")
-        
+
         nclasses = len(labels)
         if args['class'] not in labels:
             raise VergeMLError("Unknown class: " + args['class'])
-            
+
         try:
             y_test, y_score = load_predictions(env, nclasses)
         except FileNotFoundError:
             raise VergeMLError("Can't plot PR curve - not supported by model.")
-        
+
         # From:
         # https://scikit-learn.org/stable/auto_examples/model_selection/plot_precision_recall.html#sphx-glr-auto-examples-model-selection-plot-precision-recall-py
-        
+
         ix = labels.index(args['class'])
         y_test = y_test[:,ix].astype(np.int)
         y_score = y_score[:,ix]

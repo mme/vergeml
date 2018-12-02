@@ -10,27 +10,28 @@ import os.path
 import json
 from operator import methodcaller
 import io
+from copy import deepcopy
 
 
 @source('labeled-image', descr="Load labeled images.")
-@option('oversample', descr="Oversamples labels.", type=dict, yaml_only=True)
+@option('oversample', descr="Oversamples labels.", type=dict, yaml_only=True, default={})
 class LabeledImageSource(SourcePlugin):
     input_patterns = INPUT_PATTERNS
     classes = None
 
     def __init__(self, config: dict={}):
         self.files = None
-        self.oversample = config.get('oversample', dict())
+        self.oversample = deepcopy(config.get('oversample', dict()))
         super().__init__(config)
 
-    
+
     def begin_read_samples(self):
         if self.files:
             return
 
         classes_path = os.path.join(self.samples_dir, "classes.json")
         classes_are_directories = False
-        
+
         if os.path.exists(classes_path):
             self._get_classes_from_json()
         else:
@@ -39,16 +40,16 @@ class LabeledImageSource(SourcePlugin):
 
         if not self.meta['labels']:
             raise VergeMLError("No labels found.")
-        
+
         self.files = self.scan_and_split_files(self._scan_dirs(classes_are_directories))
 
 
         if self.oversample:
-            
+
             nfiles = {}
 
             for split, filenames in self.files.items():
-                
+
                 if split == 'test':
                     # don't augment test samples
                     nfiles['test'] = filenames
@@ -66,18 +67,18 @@ class LabeledImageSource(SourcePlugin):
                                 nfiles[split].append((filename, meta))
 
             self.files = nfiles
-        
-    
+
+
     def num_samples(self, split: str) -> int:
         return len(self.files[split])
 
     def _get_classes_from_json(self):
-        
+
         for filename in ("labels.txt", "classes.json"):
             path = os.path.join(self.samples_dir, filename)
             if not os.path.exists(path):
                 raise VergeMLError("{} is missing".format(filename))
-            
+
             with open(path) as f:
                 if filename == "labels.txt":
                     items = filter(None, map(methodcaller("strip"), f.read().splitlines()))
@@ -87,18 +88,18 @@ class LabeledImageSource(SourcePlugin):
         files = {}
         # prefix the sample with input_dir
         for k, v in self.classes['files'].items():
-            
+
             # on windows and linux, separator is /
             path = k.split("/")
             path.insert(0, self.samples_dir)
             fname = os.path.join(*path)
             files[fname] = v
-            
+
         self.classes['files'] = files
         self.meta['labels'] = labels
-    
+
     def _get_classes_from_dirs(self):
-        
+
         dirs = list(filter(None, (self.samples_dir, self.val_dir, self.test_dir)))
 
         # get label names from directories
@@ -151,21 +152,21 @@ class LabeledImageSource(SourcePlugin):
     def read_samples(self, split, index, n=1):
         items = self.files[split][index:index+n]
         items = [(open_image(filename), filename, meta) for filename, meta in items]
-        
+
         res = []
         for img, filename, meta in items:
             rng = random.Random(str(self.random_seed) + meta['filename'])
             y = Labels(self.classes["files"][filename])
-            res.append(Sample(img, y, meta.copy(), rng)) 
+            res.append(Sample(img, y, meta.copy(), rng))
 
         return res
 
-    
+
     def hash(self, state) -> str:
         state = io.BytesIO(state.encode('utf8'))
         state.write(str(self.oversample).encode('utf8'))
         return super().hash(state.getvalue().decode('utf8') + self.hash_files(self.files))
-        
+
     def transform(self, sample):
         onehot = np.array([float(label in sample.y) for label in self.meta['labels']])
         sample.x = np.asarray(sample.x)

@@ -1,41 +1,38 @@
+"""Code for running from the command line.
+"""
+
 import sys
-from vergeml.utils import VergeMLError, parse_ai_names
-from vergeml.validate import load_yaml_file, ValidateDevice, ValidateData
-from vergeml import __version__
-from vergeml.env import Environment
-from vergeml.plugins import PLUGINS
-from vergeml.command import Command
 import os.path
 import logging
 import getopt
 import re
-from copy import deepcopy
+from copy import deepcopy, copy
+
+from vergeml import __version__
+from vergeml.utils import VergeMLError, parse_trained_models
+from vergeml.env import Environment
+from vergeml.plugins import PLUGINS
+from vergeml.command import Command
 from vergeml.commands.help import HelpCommand
 from vergeml.utils import did_you_mean
-from vergeml.libraries import KerasLibrary, TensorFlowLibrary, TorchLibrary, NumPyLibrary, PythonInterpreter, CudaLibrary
-from copy import copy
+from vergeml.libraries import KerasLibrary, TensorFlowLibrary, TorchLibrary
+from vergeml.libraries import NumPyLibrary, PythonInterpreter, CudaLibrary
 
 
-def _parsebase(argv, plugins=PLUGINS):
-    """Parse up until the second part of the command.
+def _parsebase(argv):
+    """Parse until the second part of the command.
     """
     shortopts = 'vf:m:' # version, file, model
-    longopts = ['version', 'file=', 'model=', 'samples-dir=', 'test-split=', 'val-split=', 'cache-dir=', 'random-seed=',
-                'trainings-dir=', 'project-dir=']
+    longopts = ['version', 'file=', 'model=', 'samples-dir=', 'test-split=', 'val-split=',
+                'cache-dir=', 'random-seed=', 'trainings-dir=', 'project-dir=',
+                'cache=', 'device=', 'device-memory=']
 
-    # configs = [ValidateDevice(plugins), ValidateData(plugins)]
-    configopts = [('device-memory', 'device.memory'), ('device', 'device'), ('cache', 'data.cache')]
-    # for cnf in configs:
-    #     for opt in cnf.options():
-    #         if opt.type in (int, float, str, bool, None) and not opt.yaml_only:
-    #             cmd_opt = opt.name.replace(".", "-")
-    #             configopts.append((cmd_opt, opt.name))
-    # print(configopts)
-    args, rest = getopt.getopt(argv, shortopts, longopts + list(map(lambda o: o[0] + "=", configopts)))
+    args, rest = getopt.getopt(argv, shortopts, longopts)
 
     args = dict(args)
     # don't match prefix
     for opt in map(lambda s: s.rstrip("="), longopts):
+        # pylint: disable=W0640
         if ''f'--{opt}' in args and not any(map(lambda a: a.startswith('--' + opt), argv)):
             # find the key that does not match
             keys = map(lambda a: a.split("=")[0].lstrip("-"), argv)
@@ -45,33 +42,18 @@ def _parsebase(argv, plugins=PLUGINS):
             else:
                 raise getopt.GetoptError('Invalid key')
 
+    # convert from short to long names
+    for sht, lng in (('-v', '--version'), ('-m', '--model'), ('-f', '--file')):
+        if sht in args:
+            args[lng] = args[sht]
+            del args[sht]
 
-    for s, l in (('-v', '--version'), ('-m', '--model'), ('-f', '--file')):
-        if s in args:
-            args[l] = args[s]
-            del args[s]
+    args = {k.strip('-'):v for k, v in args.items()}
 
-    # partition into base and config options
-    base_args, config_args = {}, {}
-    longopts_ = list(map(lambda o: o.rstrip("="), longopts))
-    configoptsd = dict(configopts)
-    for k,v in args.items():
-        if v.startswith('-'):
-            try:
-                float(v)
-            except ValueError:
-                raise getopt.GetoptError('Invalid value')
-        k_ = k.lstrip('-').rstrip('=')
-        if k_ in longopts_:
-            base_args[k_] = v
-        else:
-            config_args[configoptsd[k_]] = v
-
-    # print(config_args)
-    return base_args, config_args, rest
+    return args, rest
 
 
-def _env_from_args(args, config, AI, plugins=PLUGINS):
+def _env_from_args(args, AI, plugins=PLUGINS):
     args = deepcopy(args)
     # replace hyphen with underscore for python
     args = {k.replace('-', '_'):v for k,v in args.items()}
@@ -79,7 +61,6 @@ def _env_from_args(args, config, AI, plugins=PLUGINS):
     if AI:
         args['AI'] = AI
 
-    args['config'] = config
     args['is_global_instance'] = True
     args['plugins'] = plugins
 
@@ -110,11 +91,31 @@ def _prepare_args(args):
                                "--random-seed must be an integer value.",
                                ('value', 'random-seed'))
 
+    cache_opts = ('none', 'disk', 'mem', 'disk-in', 'mem-in')
+
+    if 'cache' in args:
+        if args['cache'] not in cache_opts:
+            raise VergeMLError("Invalid value for --cache.",
+                               "Must be one of: " + ", ".join(cache_opts),
+                               help_topic='cache')
+
+    if 'device' in args:
+        if not re.match(r"^(gpu:[0-9]+|gpu|cpu|auto)", args['device']):
+            raise VergeMLError("Invalid value for --device.",
+                               "Please specify a valid device, e.g gpu:0 or cpu.",
+                               help_topic='device')
+
+    if 'device-memory' in args:
+        if not re.match(r"(([1-9]?[0-9]|100)%|(0\.[0-9]+)|1\.0)|auto", args['device-memory']):
+            raise VergeMLError("Invalid value for --device-memory.",
+                               "Please specify device memory as a percentage, e.g. 100%.",
+                               help_topic='device')
+
     return args
 
 _VERGEML_OPTION_NAMES = {
-    'version', 'file', 'model', 'samples-dir', 'val-split', 'test-split', 'cache-dir', 'random-seed',
-    'trainings-dir', 'project-dir', 'cache', 'device', 'device-memory'
+    'version', 'file', 'model', 'samples-dir', 'val-split', 'test-split', 'cache-dir',
+    'random-seed', 'trainings-dir', 'project-dir', 'cache', 'device', 'device-memory'
 }
 
 def _forgive_wrong_option_order(argv):
@@ -150,7 +151,7 @@ def _forgive_wrong_option_order(argv):
 def run(argv, plugins=PLUGINS):
     try:
         argv = _forgive_wrong_option_order(argv)
-        args, config, rest = _parsebase(argv, plugins=plugins)
+        args, rest = _parsebase(argv)
     except getopt.GetoptError as err:
         if err.opt:
             opt = err.opt.lstrip("-")
@@ -164,11 +165,11 @@ def run(argv, plugins=PLUGINS):
        exit()
 
     args = _prepare_args(args)
-    ai_names, after_names = parse_ai_names(rest)
+    ai_names, after_names = parse_trained_models(rest)
 
     AI = next(iter(ai_names), None)
 
-    env = _env_from_args(args, config, AI, plugins=plugins)
+    env = _env_from_args(args, AI, plugins=plugins)
 
     if after_names:
         cmdname = after_names.pop(0)
@@ -183,8 +184,8 @@ def run(argv, plugins=PLUGINS):
     cmd_plugin = plugins.get('vergeml.cmd', cmdname)
     if cmd_plugin:
         plugin = cmd_plugin(cmdname, plugins=plugins)
-    elif env.model:
-        for model_fn in Command.find_functions(env.model):
+    elif env.model_plugin:
+        for model_fn in Command.find_functions(env.model_plugin):
             if cmdname == Command.discover(model_fn).name:
                 plugin = model_fn
                 break
@@ -192,29 +193,17 @@ def run(argv, plugins=PLUGINS):
     if not plugin:
         # collect all possible command names
         command_names = set(plugins.keys('vergeml.cmd'))
-        if env.model:
-            model_commands = set(map(lambda f:Command.discover(f).name, Command.find_functions(env.model)))
+        if env.model_plugin:
+            model_commands = set(map(lambda f:Command.discover(f).name, Command.find_functions(env.model_plugin)))
             command_names.update(model_commands)
 
         raise VergeMLError(f"Invalid command '{cmdname}'.",
                            suggestion=did_you_mean(command_names, cmdname),
                            help_topic='*help*')
     try:
-        env_conf = env.get(cmdname) or {}
         cmd = Command.discover(plugin)
         assert cmd
-        args = cmd.parse(rest, env_conf)
-
-        if not cmd.free_form:
-            # set defaults
-            for opt in cmd.options:
-                if opt.name not in args:
-                    args[opt.name] = opt.default
-            # merge back into env
-            for k,v in args.items():
-                env.set(f"{cmdname}.{k}", v)
-        env.set("command", cmdname)
-        env.set_defaults(cmdname, args, plugins=plugins)
+        args = cmd.parse(rest)
 
         try:
             # return the result for unit testing
@@ -300,8 +289,8 @@ def main(argv=None, plugins=PLUGINS):
             print("Error! " + err_string, file=sys.stderr)
             # find all command topics
             commands = list(plugins.keys('vergeml.cmd'))
-            if ENV and ENV.model:
-                fns = Command.find_functions(ENV.model)
+            if ENV and ENV.model_plugin:
+                fns = Command.find_functions(ENV.model_plugin)
                 mcommands = list(map(lambda f: Command.discover(f).name, fns))
                 commands.extend(mcommands)
             # if the error is just one line and there is command help available, display the help message too.
@@ -316,12 +305,12 @@ def main(argv=None, plugins=PLUGINS):
                 help_topic = "" if e.help_topic == "*help*" else " " + e.help_topic
                 print(f"See 'ml help" + help_topic + "'.", file=sys.stderr)
 
-    except Exception as e:
-        if e.__class__.__name__ == 'ResourceExhaustedError':
+    except Exception as err: # pylint: disable=W0703
+        if err.__class__.__name__ == 'ResourceExhaustedError':
             print("Error! Your GPU ran out of memory.")
-            print("Please try lowering resource usage by e.g. decreasing model parameters such as batch size.")
+            print("Try lowering resource usage by decreasing model parameters such as batch size.")
         else:
-            raise e
+            raise err
 
 if __name__ == "__main__":
     main()

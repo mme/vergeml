@@ -12,11 +12,11 @@ class ImageNetModelPlugin(ModelPlugin):
     @train('train', descr='Train an image classifier.')
     @option('epochs', 5)
     @option('cnn', 'resnet-50', 'Name of the pretrained network.')
-    @option('variant', '*auto*', 'Network variant.')
-    @option('size', "*auto*", 'Image input size.', type='Union[int,str]')
+    @option('variant', 'auto', 'Network variant.')
+    @option('size', "auto", 'Image input size.', type='Union[int,str]')
     @option('alpha', 1.0, 'Network alpha value.')
     @option('layers', 1, 'Number of layers to add.')
-    @option('output-layer', '*last*', 'Name or index of the output layer.', type='Union[int,str]')
+    @option('output-layer', 'last', 'Name or index of the output layer.', type='Union[int,str]')
     @option('batch-size', 64)
     @option('optimizer', 'sgd', validate=('adam', 'sgd'))
     @option('learning-rate', 0.0001)
@@ -51,12 +51,13 @@ class ImageNetModelPlugin(ModelPlugin):
                          xy_val=list(env.data.load('val', view='list', layout='arrays')),
                          xy_test=list(env.data.load('test', view='list', layout='arrays')),
                          labels=env.data.meta['labels'])
-        # start training
+
+        # set up hyperparameters
+        hyperparameters = args.copy()
+        hyperparameters.update({'labels': env.data.meta['labels'], 'size': size})
+
         env.start_training(name=args['name'],
-                           hyperparameters={'labels': trainargs['labels'],
-                                            'size': size,
-                                            'layers': args['layers'],
-                                            'cnn': args['cnn']})
+                           hyperparameters=hyperparameters)
 
         trainargs.update(env.args_for(self.model.train, args))
         trainargs['callbacks'] = [env.keras_callback()]
@@ -69,11 +70,11 @@ class ImageNetModelPlugin(ModelPlugin):
 
 
     @predict('predict', descr="Predict image labels.")
-    @option('@AI', type='AI')
+    @option('@AI')
     @option('labels', default=5, type=int, validate='>0', descr="The number of labels to predict.")
     @option('resize', default='fill', type=str, validate=('fill', 'aspect-fill', 'aspect-fit'), descr="Resize Mode.")
     @option('compact', default=False, descr="Show results in a compact representation.", flag=True, command_line=True)
-    @option('<files>', type='List[file]', descr="The images to predict.")
+    @option('<files>', type='List[File]', descr="The images to predict.")
     def predict(self, args, env):
 
         if not self.model:
@@ -152,11 +153,11 @@ class ImageNetModel:
               epochs=20,
               batch_size=64,
               cnn="resnet-50",
-              variant="*auto*",
-              size="*auto*",
+              variant="auto",
+              size="auto",
               alpha=1.0,
               layers=1,
-              output_layer="*last*",
+              output_layer="last",
               optimizer='sgd',
               learning_rate=0.0001,
               decay=0.,

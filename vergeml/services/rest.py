@@ -14,7 +14,7 @@ from vergeml.display import DISPLAY
 DISPLAY.quiet = True
 
 @command('rest', descr="Start a REST Server.")
-@option('@AI', type='AI')
+@option('@AI')
 @option('host', type=str, default='0.0.0.0', descr="Which host to listen on.")
 @option('port', type=int, default=2204, descr="Which port to use.")
 @option('no-browser', type=bool, default=False, descr="Don't open the browser.", flag=True)
@@ -25,11 +25,11 @@ class RestService(CommandPlugin):
         if not bool(importlib.util.find_spec('waitress')):
             raise VergeMLError("Package waitress is not installed.",
                                "To run a REST server, please install waitress first.")
-        
+
         from waitress.server import create_server
         print("Loading @{} ...".format(args['@AI']))
 
-        assert env.model
+        assert env.model_plugin
         wsgiapp =  WSGIApp(env)
         server = create_server(wsgiapp.handler, host=args['host'], port=args['port'], threads=1)
         q = queue.Queue()
@@ -38,14 +38,14 @@ class RestService(CommandPlugin):
 
             def service(self):
                 try:
-                    env.model.load(env)
+                    env.model_plugin.load(env)
                     q.put("DONE")
                 except Exception as e:
                     q.put(e)
-            
+
             def defer(self):
                 pass
-            
+
             def cancel(self):
                 pass
 
@@ -61,5 +61,5 @@ class RestService(CommandPlugin):
         print("Serving on " + url)
         if not args['no-browser']:
             webbrowser.open(url)
-            
+
         server.run()
