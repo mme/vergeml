@@ -22,14 +22,8 @@ def _parsebase(argv, plugins=PLUGINS):
     longopts = ['version', 'file=', 'model=', 'samples-dir=', 'test-split=', 'val-split=', 'cache-dir=', 'random-seed=',
                 'trainings-dir=', 'project-dir=']
 
-    # configs = [ValidateDevice(plugins), ValidateData(plugins)]
     configopts = [('device-memory', 'device.memory'), ('device', 'device'), ('cache', 'data.cache')]
-    # for cnf in configs:
-    #     for opt in cnf.options():
-    #         if opt.type in (int, float, str, bool, None) and not opt.yaml_only:
-    #             cmd_opt = opt.name.replace(".", "-")
-    #             configopts.append((cmd_opt, opt.name))
-    # print(configopts)
+
     args, rest = getopt.getopt(argv, shortopts, longopts + list(map(lambda o: o[0] + "=", configopts)))
 
     args = dict(args)

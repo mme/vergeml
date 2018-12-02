@@ -290,10 +290,7 @@ class Command: # pylint: disable=R0902
             result += " [options]"
 
         if opt['arg']:
-            str_list = isinstance(opt['arg'].type, str) and opt['arg'].type.startswith("List")
-            list_type = hasattr(opt['arg'].type, '__origin__') \
-                        and opt['arg'].type.__origin__ == list
-            if str_list or list_type:
+            if opt['arg'].has_type(str, list):
                 result += f" [{opt['arg'].name} ...]"
             elif opt['arg'].is_optional():
                 result += f" [{opt['arg'].name}]"
@@ -486,7 +483,7 @@ class Command: # pylint: disable=R0902
             if opt.short:
                 assert opt.short not in shortopts
 
-                if opt.type == bool:
+                if opt.has_type(bool):
                     shortopts += opt.short
                 else:
                     shortopts += opt.short + ":"
@@ -561,7 +558,7 @@ class Command: # pylint: disable=R0902
                 value = longs_dict[opt.name]
 
             if opt.short and opt.short in shorts_dict:
-                if opt.type == bool:
+                if opt.has_type(bool):
                     value = True
                 else:
                     value = shorts_dict[opt.short]
