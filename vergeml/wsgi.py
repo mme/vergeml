@@ -101,15 +101,14 @@ class WSGIApp:
             display_name = o.name.strip("<").strip(">")
             descr = o.descr + " (" + o.human_type() + ")"
 
-            if o.type in (float, int, 'float', 'int',
-                          'Optional[float]', 'Optional[int]', Optional[float], Optional[int]):
+            if o.has_type(float, int, 'Optional[float]', 'Optional[int]'):
                 value = '' if o.default is None else o.default
                 res.append(_TEMPLATE_NUMBER.format(name=display_name, value=value, descr=descr))
-            elif o.type == 'file' or o.type == 'Optional[file]':
+            elif o.has_type('File', 'Optional[file]'):
                 res.append(_TEMPLATE_FILE.format(name=display_name, multiple="", descr=descr, label='Select file...'))
-            elif o.type == 'List[file]':
+            elif o.has_type('List[File]'):
                 res.append(_TEMPLATE_FILE.format(name=display_name, multiple="multiple", descr=descr, label='Select files...'))
-            elif o.type in ('str', str) and isinstance(o.validate, (list, tuple)):
+            elif o.has_type(str) and isinstance(o.validate, (list, tuple)):
                 res.append(_TEMPLATE_LIST(name=display_name, descr=descr, opts=o.validate, default=o.default))
             else:
                 value = '' if o.default is None else o.default
@@ -139,7 +138,7 @@ class WSGIApp:
                 if form_name in form:
                     value = form[form_name]
 
-                    if o.type == "List[file]" or o.type == "file" or o.type == "Optional[file]":
+                    if o.has_type("File", "List[File]", "Optional[File]"):
                         files = []
                         if not isinstance(value, list):
                             value = [value]
@@ -158,7 +157,7 @@ class WSGIApp:
                             if len(files) == 0:
                                 raise VergeMLError("Missing argument: {}".format(o.name))
                             args[o.name] = files[0]
-                        elif o.type == "Optional[file]":
+                        elif o.type == "Optional[File]":
                             if len(files) > 0:
                                 args[o.name] = files[0]
                         else:

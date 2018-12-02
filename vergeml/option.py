@@ -163,14 +163,16 @@ class Option:
             if self.type == typ:
                 return True
 
+            if typ in (list, List) and getattr(self.type, '__name__', None) == 'List':
+                return True
+
         return False
 
     def validate_value(self, value):
         if not self.validate:
             return
 
-        if hasattr(self.type, '__origin__') and self.type.__origin__ == Union and \
-           type(None) in self.type.__args__ and value in (None, 'null', 'Null', 'NULL'):
+        if not self.is_required() and value in (None, 'null', 'Null', 'NULL'):
            return
 
         if isinstance(self.validate, (tuple, list)) and value not in self.validate:
