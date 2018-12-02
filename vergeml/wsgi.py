@@ -139,7 +139,6 @@ class WSGIApp:
 
                 if form_name in form:
                     value = form[form_name]
-                    import ipdb; ipdb.set_trace()  # breakpoint a3d3166f //
 
                     if o.has_type("File", "List[File]", "Optional[File]"):
                         files = []
@@ -156,11 +155,11 @@ class WSGIApp:
                                 shutil.copyfileobj(item.file, f)
                             files.append(name)
 
-                        if o.type.has_type("File"):
+                        if o.has_type("File"):
                             if not files:
                                 raise VergeMLError("Missing argument: {}".format(o.name))
                             args[o.name] = files[0]
-                        elif o.type.has_type("Optional[File]"):
+                        elif o.has_type("Optional[File]"):
                             if files:
                                 args[o.name] = files[0]
                         else:
