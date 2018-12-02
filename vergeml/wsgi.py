@@ -104,7 +104,7 @@ class WSGIApp:
             if o.has_type(float, int, 'Optional[float]', 'Optional[int]'):
                 value = '' if o.default is None else o.default
                 res.append(_TEMPLATE_NUMBER.format(name=display_name, value=value, descr=descr))
-            elif o.has_type('File', 'Optional[file]'):
+            elif o.has_type('File', 'Optional[File]'):
                 res.append(_TEMPLATE_FILE.format(name=display_name, multiple="", descr=descr, label='Select file...'))
             elif o.has_type('List[File]'):
                 res.append(_TEMPLATE_FILE.format(name=display_name, multiple="multiple", descr=descr, label='Select files...'))
@@ -126,7 +126,9 @@ class WSGIApp:
         tempdirs = []
         try:
             for o in cmd.options:
+
                 if o.is_at_option():
+                    args[o.name] = self.env.AI
                     continue
 
                 if o.command_line:
@@ -137,6 +139,7 @@ class WSGIApp:
 
                 if form_name in form:
                     value = form[form_name]
+                    import ipdb; ipdb.set_trace()  # breakpoint a3d3166f //
 
                     if o.has_type("File", "List[File]", "Optional[File]"):
                         files = []
@@ -153,12 +156,12 @@ class WSGIApp:
                                 shutil.copyfileobj(item.file, f)
                             files.append(name)
 
-                        if o.type == "file":
-                            if len(files) == 0:
+                        if o.type.has_type("File"):
+                            if not files:
                                 raise VergeMLError("Missing argument: {}".format(o.name))
                             args[o.name] = files[0]
-                        elif o.type == "Optional[File]":
-                            if len(files) > 0:
+                        elif o.type.has_type("Optional[File]"):
+                            if files:
                                 args[o.name] = files[0]
                         else:
                             args[o.name] = files
