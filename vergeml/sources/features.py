@@ -28,15 +28,15 @@ class ImageNetFeatures:
 @source('image-features', descr='Load Images and convert to feature vectors.', input_patterns=INPUT_PATTERNS)
 @option('output-layer', default='*last*', descr='Index or name of the output layer to use.', type="Union[str,int]")
 @option('cnn', default='resnet-50', descr='Name of the CNN to use. Use @name for your own.', type="Union[str,int]")
-@option('variant', default='*auto*', descr='The variant of the CNN.', type=str)
+@option('variant', default='auto', descr='The variant of the CNN.', type=str)
 @option('size', default="auto", descr='The input size of the CNN.', type='Union[str, int]')
 @option('alpha', default=1.0, descr='MobileNet alpha value.', type=float)
 class ImageFeaturesSource(ImageSource, ImageNetFeatures):
-    
+
     def __init__(self, args: dict={}):
         super().__init__(args)
         ImageNetFeatures.__init__(self, args)
-    
+
     def transform(self, sample):
         if not self.model:
             if not self.cnn.startswith("@"):
@@ -62,15 +62,15 @@ class ImageFeaturesSource(ImageSource, ImageNetFeatures):
 @source('labeled-image-features', descr='Load labeled Images and convert to feature vectors.', input_patterns=INPUT_PATTERNS)
 @option('output-layer', default='*last*', descr='Index or name of the output layer to use.', type="Union[str,int]")
 @option('cnn', default='resnet-50', descr='Name of the CNN to use. Use @name for your own.', type="Union[str,int]")
-@option('variant', default='*auto*', descr='The variant of the CNN.', type=str)
-@option('size', default="*auto*", descr='The size of the CNN.', type='Union[str, int]')
+@option('variant', default='auto', descr='The variant of the CNN.', type=str)
+@option('size', default="auto", descr='The size of the CNN.', type='Union[str, int]')
 @option('alpha', default=1.0, descr='MobileNet alpha value.', type=float)
 class LabeledImageFeaturesSource(LabeledImageSource, ImageNetFeatures):
-    
+
     def __init__(self, args: dict={}):
         super().__init__(args)
         ImageNetFeatures.__init__(self, args)
-    
+
     def transform(self, sample):
         if not self.model:
             if not self.cnn.startswith("@"):
@@ -94,7 +94,7 @@ class LabeledImageFeaturesSource(LabeledImageSource, ImageNetFeatures):
         sample.x = features
         sample = super().transform(sample)
         return sample
-    
+
 
 
 ARCHITECTURES = (
@@ -131,19 +131,19 @@ MOBILENET_ALPHA_VALUES = (
 )
 
 MOBILENET_V2_SIZES = (
-    96, 
-    128, 
-    160, 
-    192, 
+    96,
+    128,
+    160,
+    192,
     224
 )
 
 MOBILENET_V2_ALPHA_VALUES = (
-    0.35, 
-    0.50, 
-    0.75, 
-    1.0, 
-    1.3, 
+    0.35,
+    0.50,
+    0.75,
+    1.0,
+    1.3,
     1.4
 )
 
@@ -160,13 +160,13 @@ def get_custom_cnn(name, trainings_dir, output_layer):
         if isinstance(output_layer, int):
             layer = model.layers[output_layer]
         else:
-            layer = model.get_layer(output_layer)                
+            layer = model.get_layer(output_layer)
     except Exception:
         if isinstance(output_layer, int):
             raise VergeMLError(f'output-layer {output_layer} not found - model has only {len(model.layers)} layers.')
         else:
             candidates = list(map(lambda l: l.name, model.layers))
-            raise VergeMLError(f'output-layer named {output_layer} not found.', 
+            raise VergeMLError(f'output-layer named {output_layer} not found.',
                                suggestion=did_you_mean(candidates, output_layer))
     model = Model(inputs=model.input, outputs=layer.output)
     return model
@@ -178,13 +178,13 @@ def get_imagenet_cnn(architecture, variant, size, alpha, output_layer, include_t
     if include_top:
         assert output_layer == '*last*'
 
-    if size == '*auto*':
+    if size == 'auto':
         size = get_image_size(architecture, variant, size)
 
     shape = (size, size, 3)
-    
+
     if architecture == 'densenet':
-        if variant == '*auto*':
+        if variant == 'auto':
             variant = 'densenet-121'
         if variant == 'densenet-121':
             model = applications.DenseNet121(weights=weights, include_top=include_top, input_shape=shape)
@@ -197,9 +197,9 @@ def get_imagenet_cnn(architecture, variant, size, alpha, output_layer, include_t
     elif architecture == 'mobilenet':
         model = applications.MobileNet(weights=weights, include_top=include_top, input_shape=shape, alpha=alpha)
     elif architecture == 'mobilenet-v2':
-        model = applications.MobileNetV2(weights=weights, include_top=include_top, input_shape=shape, alpha=alpha)     
+        model = applications.MobileNetV2(weights=weights, include_top=include_top, input_shape=shape, alpha=alpha)
     elif architecture == 'nasnet':
-        if variant == '*auto*':
+        if variant == 'auto':
             variant = 'large'
         if variant == 'large':
             model = applications.NASNetLarge(weights=weights, include_top=include_top, input_shape=shape)
@@ -221,11 +221,11 @@ def get_imagenet_cnn(architecture, variant, size, alpha, output_layer, include_t
             if isinstance(output_layer, int):
                 layer = model.layers[output_layer]
             else:
-                layer = model.get_layer(output_layer)                
+                layer = model.get_layer(output_layer)
         except Exception:
             raise VergeMLError('layer not found: {}'.format(output_layer))
         model = Model(inputs=model.input, outputs=layer.output)
-    
+
     return model
 
 def generic_preprocess_input(input):
@@ -276,7 +276,7 @@ def get_image_size(architecture, variant=None, size=None):
     elif architecture == 'inception-resnet-v2':
         image_size = 299
     elif architecture == 'mobilenet' or architecture == 'mobilenet-v2':
-        if size == "*auto*":
+        if size == "auto":
             image_size = 224
         else:
             image_size = size
@@ -306,24 +306,24 @@ def evaluate_args(cnn, trainings_dir, variant, alpha, size):
             raise VergeMLError("Unknown CNN: {}".format(cnn))
 
     if cnn == 'densenet':
-        if variant == '*auto*':
+        if variant == 'auto':
             variant = DENSENET_VARIANTS[0]
         if not variant in DENSENET_VARIANTS:
             raise VergeMLError("Invalid densenet variant: {}".format(variant))
 
     elif cnn == 'mobilenet':
-        if size not in MOBILENET_SIZES and size != "*auto*":
+        if size not in MOBILENET_SIZES and size != "auto":
             raise VergeMLError("Invalid mobilenet size: {}".format(size))
         if alpha not in MOBILENET_ALPHA_VALUES:
             raise VergeMLError("Invalid alpha value: {}".format(alpha))
 
     elif cnn == 'mobilenet-v2':
-        if size not in MOBILENET_V2_SIZES and size != "*auto*":
+        if size not in MOBILENET_V2_SIZES and size != "auto":
             raise VergeMLError("Invalid mobilenet size: {}".format(size))
 
         if alpha not in MOBILENET_V2_ALPHA_VALUES:
-            raise VergeMLError("Invalid alpha value: {}".format(alpha)) 
+            raise VergeMLError("Invalid alpha value: {}".format(alpha))
 
     elif cnn == 'nasnet':
-        if not variant in NASNET_VARIANTS and variant != '*auto*':
+        if not variant in NASNET_VARIANTS and variant != 'auto':
             raise VergeMLError("Invalid nasnet variant: {}".format(variant))

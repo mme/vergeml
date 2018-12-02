@@ -23,6 +23,10 @@ from vergeml.display import DISPLAY, TrainingFeedback
 from vergeml.config import yaml_find_definition, display_err_in_file, load_yaml_file
 from vergeml.config import parse_data, parse_device
 
+
+# represent labels as list
+yaml.add_representer(Labels, lambda dump, dat: dump.represent_list(dat))
+
 # REVIEW add a method to push/pop the environment
 
 ENV = None

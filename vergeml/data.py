@@ -377,7 +377,7 @@ class Data:
             self.cache_input, self.cache_output = 'disk', False
         elif cache == 'mem':
             self.cache_input, self.cache_output = False, 'mem'
-        elif cache in ('disk', '*auto*'):
+        elif cache in ('disk', 'auto'):
             self.cache_input, self.cache_output = False, 'disk'
         elif cache == 'none':
             self.cache_input, self.cache_output = False, False
