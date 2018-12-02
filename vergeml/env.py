@@ -74,7 +74,7 @@ class Environment:
                  cache=None,
                  device=None,
                  device_memory=None,
-                 AI=None,
+                 trained_model=None,
                  is_global_instance=False,
                  # config=None,
                  plugins=PLUGINS,
@@ -90,7 +90,7 @@ class Environment:
         :param random_seed:     Random seed. [default 2204]
         :param trainings_dir:   The directory to save training results to. [default: trainings]
         :param project_dir:     The directory of the project. [default: current directory]
-        :param AI:              Optional name of a trained AI.
+        :param trained_model:   Optional name of a trained model.
         :is_global_instance:    If true, this env can be accessed under the global var env.ENV.
                                 [default: false]
         :config:                Additional configuration to pass to env, i.e. if not using a project
@@ -107,9 +107,8 @@ class Environment:
         # setup the display
         self.display = display
 
-        # REVIEW this should be named trained_model
-        # set the name of the AI if given
-        self.AI = AI
+        # set the name of the trained model if given
+        self.trained_model = trained_model
 
         # this holds the model object (not the name of the model)
         self.model_plugin = None
@@ -166,7 +165,7 @@ class Environment:
         # Have the data_file variable in outer scope for later when reporting errors
         data_file = None
 
-        if self.AI:
+        if self.trained_model:
             data_file = self._load_trained_model()
 
         self._load_model_plugin(project_file, data_file, model is not None)
@@ -211,14 +210,14 @@ class Environment:
         """Load a trained models hyperparameters and results
         """
 
-        train_mod_path = os.path.join(self._config['trainings-dir'], self.AI)
+        train_mod_path = os.path.join(self._config['trainings-dir'], self.trained_model)
         if not os.path.exists(train_mod_path):
-            raise VergeMLError("Trained model not found: {}".format(self.AI))
+            raise VergeMLError("Trained model not found: {}".format(self.trained_model))
 
         # Merge data.yaml
-        data_file = os.path.join(self._config['trainings-dir'], self.AI, 'data.yaml')
+        data_file = os.path.join(self._config['trainings-dir'], self.trained_model, 'data.yaml')
         if not os.path.exists(data_file):
-            raise VergeMLError("data.yaml file not found for AI {}: {}".format(self.AI, data_file))
+            raise VergeMLError("data.yaml file not found for {}: {}".format(self.trained_model, data_file))
 
         doc = load_yaml_file(data_file, 'data file')
         self._config.update({
@@ -324,21 +323,21 @@ class Environment:
             raise VergeMLError(f'Configured samples-dir is not a directory: {samples_dir}')
         return samples_dir
 
-    def AI_dir(self):
-        """Return the directory of an AI (create if it does not exist).
+    def trained_model_dir(self):
+        """Return the directory of a trained model (create if it does not exist).
         """
-        assert self.AI, "You must create an AI first."
-        AI_dir = os.path.join(self._config['trainings-dir'], self.AI)
+        assert self.trained_model, "You must create a trained model first."
+        trained_model_dir = os.path.join(self._config['trainings-dir'], self.trained_model)
         try:
-            os.makedirs(AI_dir)
+            os.makedirs(trained_model_dir)
         except FileExistsError:
             pass
-        return AI_dir
+        return trained_model_dir
 
     def checkpoints_dir(self):
         """Return the checkpoints directory (create if it does not exist)
         """
-        checkpoints_dir = os.path.join(self.AI_dir(), "checkpoints")
+        checkpoints_dir = os.path.join(self.trained_model_dir(), "checkpoints")
         try:
             os.makedirs(checkpoints_dir)
         except FileExistsError:
@@ -348,7 +347,7 @@ class Environment:
     def stats_dir(self):
         """Return the stats directory (create if it does not exist)
         """
-        stats_dir = os.path.join(self.AI_dir(), "stats")
+        stats_dir = os.path.join(self.trained_model_dir(), "stats")
         try:
             os.makedirs(stats_dir)
         except FileExistsError:
@@ -371,14 +370,14 @@ class Environment:
                        hyperparameters={}):
         """Start a training session.
 
-        :param name: The name of the AI to create
+        :param name: The name of the trained model to create
         :param hyperparameters: Pass in a models fixed parameters so they can be recovered later.
         """
         created = datetime.datetime.now()
-        self.AI = name or random_robot_name(created, self._config['trainings-dir'])
+        self.trained_model = name or random_robot_name(created, self._config['trainings-dir'])
 
-        self.display.print("Creating @{} ...".format(self.AI))
-        robot = ascii_robot(created, self.AI)
+        self.display.print("Creating @{} ...".format(self.trained_model))
+        robot = ascii_robot(created, self.trained_model)
         if "VERGEML_FUNKY_ROBOTS" in os.environ:
             self.display.print("")
             self.display.print(robot)
@@ -394,7 +393,7 @@ class Environment:
         self.set('random_robot', robot)
         self.set('results', results)
 
-        data_file = os.path.join(self.AI_dir(), "data.yaml")
+        data_file = os.path.join(self.trained_model_dir(), "data.yaml")
 
         self.results = _Results(self, data_file)
         # results will do the rest. As results periodically updates data.yaml,
@@ -406,7 +405,7 @@ class Environment:
         self.training = Training(self, stats_file)
 
         # save the original configuration
-        config_file = os.path.join(self.AI_dir(), "configuration.yaml")
+        config_file = os.path.join(self.trained_model_dir(), "configuration.yaml")
         config = deepcopy(self._config)
 
         del config['hyperparameters']
@@ -416,7 +415,7 @@ class Environment:
         with open(config_file, "w") as file:
             yaml.dump(config, file, default_flow_style=False)
 
-        return self.AI
+        return self.trained_model
 
     def end_training(self, final_results={}):
         """End a training session.
@@ -506,8 +505,8 @@ class Environment:
             'checkpoints_dir': self.checkpoints_dir,
             'samples_dir': self.samples_dir,
             'tensorflow_session': self.tensorflow_session,
-            'AI_dir': self.AI_dir,
-            'AI': lambda: self.AI,
+            'trained_model_dir': self.trained_model_dir,
+            'trained_model': lambda: self.trained_model,
             'test_split': lambda: self.get('test-split'),
             'val_split': lambda: self.get('val-split'),
             'cache_dir': self.cache_dir(),

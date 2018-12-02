@@ -16,7 +16,7 @@ def test_training(tmpdir):
     callback(9, 99, acc=0.78, loss=0.837, val_acc=0.67)
     env.end_training(final_results=dict(val_acc=0.77))
     assert env.get('results.val_acc') == 0.77
-    with open(os.path.join(env.AI_dir(), "data.yaml")) as f:
+    with open(os.path.join(env.trained_model_dir(), "data.yaml")) as f:
         data_yaml = yaml.safe_load(f)
     with open(os.path.join(env.stats_dir(), "stats.csv")) as f:
         stats_csv = f.read()

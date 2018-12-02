@@ -53,13 +53,13 @@ def _parsebase(argv):
     return args, rest
 
 
-def _env_from_args(args, AI, plugins=PLUGINS):
+def _env_from_args(args, trained_model, plugins=PLUGINS):
     args = deepcopy(args)
     # replace hyphen with underscore for python
-    args = {k.replace('-', '_'):v for k,v in args.items()}
+    args = {k.replace('-', '_'):v for k, v in args.items()}
 
-    if AI:
-        args['AI'] = AI
+    if trained_model:
+        args['trained_model'] = trained_model
 
     args['is_global_instance'] = True
     args['plugins'] = plugins

@@ -22,7 +22,7 @@ class WSGIApp:
                 self.fns[cmd.name] = (cmd, model_fn)
 
         if not len(self.fns):
-            raise VergeMLError(f"@{env.AI} can't be run as a REST service.")
+            raise VergeMLError(f"@{env.trained_model} can't be run as a REST service.")
 
     def handler(self, environ, start_response):
         path_info = environ.get('PATH_INFO')
@@ -65,7 +65,7 @@ class WSGIApp:
             return '200 OK', f.read(), mime_type
 
     def _serve_index(self, environ):
-        index = _TEMPLATE.format(name=self.env.AI,
+        index = _TEMPLATE.format(name=self.env.trained_model,
                                  content='<a id="hamburger">&#9776;</a> <div id="logo-big"> </div>',
                                  menu=self._make_menu())
         return '200 OK', index.encode('utf-8'), 'text/html'
@@ -76,7 +76,7 @@ class WSGIApp:
                                         name=name,
                                         descr=self.fns[name][0].descr,
                                         fields=self._make_fields(name))
-        index = _TEMPLATE.format(name=self.env.AI,
+        index = _TEMPLATE.format(name=self.env.trained_model,
                                  content=content_a + _TEMPLATE_B,
                                  menu=self._make_menu(name))
         return '200 OK', index.encode('utf-8'), 'text/html'
@@ -128,7 +128,7 @@ class WSGIApp:
             for o in cmd.options:
 
                 if o.is_at_option():
-                    args[o.name] = self.env.AI
+                    args[o.name] = self.env.trained_model
                     continue
 
                 if o.command_line:

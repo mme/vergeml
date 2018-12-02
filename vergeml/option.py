@@ -37,7 +37,7 @@ def option(name, default=None, descr=None, type=None, validate=None, transform=N
                                 - NoneType
                                 - dict
                                 - list
-                                - AI
+                                - TrainedModel (shortcut '@'')
                                 - file
                                 - List[<int, float, str>]
                                 - Optional[<any of above>]
