@@ -26,7 +26,7 @@ class ImageNetFeatures:
         self.image_size = get_image_size(self.cnn, self.variant, self.size)
 
 @source('image-features', descr='Load Images and convert to feature vectors.', input_patterns=INPUT_PATTERNS)
-@option('output-layer', default='*last*', descr='Index or name of the output layer to use.', type="Union[str,int]")
+@option('output-layer', default='last', descr='Index or name of the output layer to use.', type="Union[str,int]")
 @option('cnn', default='resnet-50', descr='Name of the CNN to use. Use @name for your own.', type="Union[str,int]")
 @option('variant', default='auto', descr='The variant of the CNN.', type=str)
 @option('size', default="auto", descr='The input size of the CNN.', type='Union[str, int]')
@@ -60,7 +60,7 @@ class ImageFeaturesSource(ImageSource, ImageNetFeatures):
         return sample
 
 @source('labeled-image-features', descr='Load labeled Images and convert to feature vectors.', input_patterns=INPUT_PATTERNS)
-@option('output-layer', default='*last*', descr='Index or name of the output layer to use.', type="Union[str,int]")
+@option('output-layer', default='last', descr='Index or name of the output layer to use.', type="Union[str,int]")
 @option('cnn', default='resnet-50', descr='Name of the CNN to use. Use @name for your own.', type="Union[str,int]")
 @option('variant', default='auto', descr='The variant of the CNN.', type=str)
 @option('size', default="auto", descr='The size of the CNN.', type='Union[str, int]')
@@ -176,7 +176,7 @@ def get_imagenet_cnn(architecture, variant, size, alpha, output_layer, include_t
     from keras import applications, Model
 
     if include_top:
-        assert output_layer == '*last*'
+        assert output_layer == 'last'
 
     if size == 'auto':
         size = get_image_size(architecture, variant, size)
@@ -216,7 +216,7 @@ def get_imagenet_cnn(architecture, variant, size, alpha, output_layer, include_t
     elif architecture == 'inception-v3':
         model = applications.InceptionV3(weights=weights, include_top=include_top, input_shape=shape)
 
-    if output_layer != '*last*':
+    if output_layer != 'last':
         try:
             if isinstance(output_layer, int):
                 layer = model.layers[output_layer]
