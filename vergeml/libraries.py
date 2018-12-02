@@ -117,7 +117,7 @@ class TensorFlowLibrary(Library):
         import tensorflow as tf # pylint: disable=E0401
 
         devid = env.get('device.id')
-        if devid != "*auto*":
+        if devid != "auto":
             if devid == "cpu":
                 devnum = None
             else:
@@ -135,7 +135,7 @@ class TensorFlowLibrary(Library):
             config.gpu_options.visible_device_list = devnum  # pylint: disable=locally-disabled, E1101
 
         device_memory = env.get('device.memory')
-        if device_memory != '*auto*':
+        if device_memory != 'auto':
             # pylint: disable=E1101
             try:
                 fraction = float(device_memory.rstrip("%"))/100.

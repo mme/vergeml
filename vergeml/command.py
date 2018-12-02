@@ -55,14 +55,14 @@ class _CommandCallProxy:
                     # TODO show --name only when called via the command line
                     raise VergeMLError(f'Missing argument --{opt.name}.', help_topic=cmd.name)
 
+
+            env.set(cmd.name, fn_args)
+
         # Set up defaults for the command. This will also give models a chance
         # to alter the configuration of the environment before command
         # execution.
 
         env.set_defaults(cmd.name, fn_args)
-
-        # REVIEW
-        # When training, this is a good time to save the original configuration.
 
         return fun(fn_args, env)
 

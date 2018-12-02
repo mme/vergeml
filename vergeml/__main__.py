@@ -100,13 +100,13 @@ def _prepare_args(args):
                                help_topic='cache')
 
     if 'device' in args:
-        if not re.match(r"^(gpu:[0-9]+|gpu|cpu|\*auto\*)", args['device']):
+        if not re.match(r"^(gpu:[0-9]+|gpu|cpu|auto)", args['device']):
             raise VergeMLError("Invalid value for --device.",
                                "Please specify a valid device, e.g gpu:0 or cpu.",
                                help_topic='device')
 
     if 'device-memory' in args:
-        if not re.match(r"(([1-9]?[0-9]|100)%|(0\.[0-9]+)|1\.0)|\*auto\*", args['device-memory']):
+        if not re.match(r"(([1-9]?[0-9]|100)%|(0\.[0-9]+)|1\.0)|auto", args['device-memory']):
             raise VergeMLError("Invalid value for --device-memory.",
                                "Please specify device memory as a percentage, e.g. 100%.",
                                help_topic='device')
@@ -305,12 +305,12 @@ def main(argv=None, plugins=PLUGINS):
                 help_topic = "" if e.help_topic == "*help*" else " " + e.help_topic
                 print(f"See 'ml help" + help_topic + "'.", file=sys.stderr)
 
-    except Exception as e:
-        if e.__class__.__name__ == 'ResourceExhaustedError':
+    except Exception as err: # pylint: disable=W0703
+        if err.__class__.__name__ == 'ResourceExhaustedError':
             print("Error! Your GPU ran out of memory.")
-            print("Try lowering resource usage by e.g. decreasing model parameters such as batch size.")
+            print("Try lowering resource usage by decreasing model parameters such as batch size.")
         else:
-            raise e
+            raise err
 
 if __name__ == "__main__":
     main()

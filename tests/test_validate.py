@@ -14,8 +14,8 @@ from vergeml.config import parse_device, parse_data, yaml_find_definition, _disp
 
 def test_apply_empty_config():
     assert parse_device(None) == {
-        'id': '*auto*',
-        'memory': '*auto*',
+        'id': 'auto',
+        'memory': 'auto',
         'grow-memory': True
     }
 
@@ -23,7 +23,7 @@ def test_apply_empty_config():
 def test_apply_config():
     assert parse_device('gpu:1') == {
         'id': 'gpu:1',
-        'memory': '*auto*',
+        'memory': 'auto',
         'grow-memory': True
     }
 
@@ -34,7 +34,7 @@ def test_input_shortcut_1():
         'input': {
             'type': 'image',
             'input-patterns': ['**/*.jpg', '**/*.jpeg', '**/*.png', '**/*.bmp']},
-        'cache': '*auto*',
+        'cache': 'auto',
         'preprocess': []
     }
 
@@ -45,7 +45,7 @@ def test_input_shortcut_2():
         'input': {
             'type': 'image',
             'input-patterns': ['**/*.jpg', '**/*.jpeg', '**/*.png', '**/*.bmp']},
-        'cache': '*auto*',
+        'cache': 'auto',
         'preprocess': []
     }
 
@@ -59,7 +59,7 @@ def test_input_output():
         'output': {
             'type': 'image',
             'input-patterns': ['**/*.jpg', '**/*.jpeg', '**/*.png', '**/*.bmp']},
-        'cache': '*auto*',
+        'cache': 'auto',
         'preprocess': []
     }
 
@@ -67,7 +67,7 @@ def test_validate_preprocess():
     plugins = _DictPluginManager()
     plugins.set('vergeml.operation', 'augment', AugmentOperation)
     assert parse_data({'preprocess': [{'op': 'augment', 'variants': 4}]}) == {
-        'cache': '*auto*',
+        'cache': 'auto',
         'preprocess': [{'op': 'augment', 'variants': 4}]
     }
 
@@ -82,7 +82,7 @@ def test_validate_preprocess_invalid():
 def test_config_dict():
     assert parse_device({'id': 'gpu:1'}) == {
         'id': 'gpu:1',
-        'memory': '*auto*',
+        'memory': 'auto',
         'grow-memory': True
     }
 
@@ -90,7 +90,7 @@ def test_config_invalid():
     with pytest.raises(VergeMLError):
         assert parse_device({'id': 'gpu:1', 'invalid': 'true'}) == {
             'id': 'gpu:1',
-            'memory': '*auto*',
+            'memory': 'auto',
             'grow-memory': True
         }
 
@@ -155,7 +155,7 @@ def test_apply_config_image():
             'type': 'image',
             'input-patterns': ['*.jpg']
         },
-        'cache': '*auto*',
+        'cache': 'auto',
         'preprocess': []
     }
 

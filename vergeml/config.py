@@ -33,8 +33,8 @@ def parse_device(section, device_id=None, device_memory=None):
         section['memory'] = device_memory
 
     res = {
-        'id': '*auto*',
-        'memory': '*auto*',
+        'id': 'auto',
+        'memory': 'auto',
         'grow-memory': True
     }
 
@@ -56,7 +56,7 @@ def _parse_device_id(res, section):
 
         value = section['id'].strip()
 
-        if not re.match(r"^(gpu:[0-9]+|gpu|cpu|\*auto\*)", value):
+        if not re.match(r"^(gpu:[0-9]+|gpu|cpu|auto)", value):
             raise _invalid_option('device.id', 'device')
 
         if value == 'gpu':
@@ -78,7 +78,7 @@ def _parse_device_memory(res, section):
             res['memory'] = value
 
 
-        if value != '*auto*':
+        if value != 'auto':
             if not re.match(r'^[0-9]+(\.[0-9]*)?%$', value):
                 raise _invalid_option('device.memory', 'device')
 
@@ -126,7 +126,7 @@ def parse_data(section, cache=None, plugins=PLUGINS):
         section['cache'] = cache
 
     res = {
-        'cache': '*auto*',
+        'cache': 'auto',
         'preprocess': []
     }
 
@@ -145,7 +145,7 @@ def parse_data(section, cache=None, plugins=PLUGINS):
     return res
 
 
-_VALID_CACHE_VALUES = ('none', 'mem', 'disk', 'mem-in', 'disk-in', '*auto*')
+_VALID_CACHE_VALUES = ('none', 'mem', 'disk', 'mem-in', 'disk-in', 'auto')
 def _parse_data_cache(res, section):
 
     if 'cache' in section:
