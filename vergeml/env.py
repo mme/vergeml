@@ -24,8 +24,11 @@ from vergeml.config import yaml_find_definition, display_err_in_file, load_yaml_
 from vergeml.config import parse_data, parse_device
 
 
-# represent labels as list
+# Represent labels as list
 yaml.add_representer(Labels, lambda dump, dat: dump.represent_list(dat))
+
+# Do not use aliases.
+yaml.Dumper.ignore_aliases = lambda *_args: True
 
 # REVIEW add a method to push/pop the environment
 
@@ -304,7 +307,7 @@ class Environment:
 
         For example, to access the variable 'id' in the dict 'device', use device.id as path.
         """
-        return dict_get_path(self._config, path, None)
+        return deepcopy(dict_get_path(self._config, path, None))
 
     def set(self, path, value):
         """Set a value by its path.
@@ -401,6 +404,18 @@ class Environment:
         # create the training object
         stats_file = os.path.join(self.stats_dir(), "stats.csv")
         self.training = Training(self, stats_file)
+
+        # save the original configuration
+        config_file = os.path.join(self.AI_dir(), "configuration.yaml")
+        config = deepcopy(self._config)
+
+        del config['hyperparameters']
+        del config['results']
+        del config['random_robot']
+
+        with open(config_file, "w") as file:
+            yaml.dump(config, file, default_flow_style=False)
+
         return self.AI
 
     def end_training(self, final_results={}):

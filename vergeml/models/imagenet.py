@@ -16,7 +16,7 @@ class ImageNetModelPlugin(ModelPlugin):
     @option('size', "auto", 'Image input size.', type='Union[int,str]')
     @option('alpha', 1.0, 'Network alpha value.')
     @option('layers', 1, 'Number of layers to add.')
-    @option('output-layer', '*last*', 'Name or index of the output layer.', type='Union[int,str]')
+    @option('output-layer', 'last', 'Name or index of the output layer.', type='Union[int,str]')
     @option('batch-size', 64)
     @option('optimizer', 'sgd', validate=('adam', 'sgd'))
     @option('learning-rate', 0.0001)
@@ -158,7 +158,7 @@ class ImageNetModel:
               size="auto",
               alpha=1.0,
               layers=1,
-              output_layer="*last*",
+              output_layer="last",
               optimizer='sgd',
               learning_rate=0.0001,
               decay=0.,
