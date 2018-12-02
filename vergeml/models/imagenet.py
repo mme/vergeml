@@ -71,7 +71,7 @@ class ImageNetModelPlugin(ModelPlugin):
 
 
     @predict('predict', descr="Predict image labels.")
-    @option('@AI', type='AI')
+    @option('@AI')
     @option('labels', default=5, type=int, validate='>0', descr="The number of labels to predict.")
     @option('resize', default='fill', type=str, validate=('fill', 'aspect-fill', 'aspect-fit'), descr="Resize Mode.")
     @option('compact', default=False, descr="Show results in a compact representation.", flag=True, command_line=True)

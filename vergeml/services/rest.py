@@ -14,7 +14,7 @@ from vergeml.display import DISPLAY
 DISPLAY.quiet = True
 
 @command('rest', descr="Start a REST Server.")
-@option('@AI', type='AI')
+@option('@AI')
 @option('host', type=str, default='0.0.0.0', descr="Which host to listen on.")
 @option('port', type=int, default=2204, descr="Which port to use.")
 @option('no-browser', type=bool, default=False, descr="Don't open the browser.", flag=True)
