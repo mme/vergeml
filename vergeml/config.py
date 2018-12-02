@@ -155,7 +155,7 @@ def _parse_data_cache(res, section):
 
             suggestion = did_you_mean(_VALID_CACHE_VALUES, value)
             raise _invalid_option('data.cache', help_topic='cache', suggestion=suggestion)
-        res['value'] = value
+        res['cache'] = value
 
 
 def _parse_data_source(res, section, key, plugins):
