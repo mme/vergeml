@@ -8,7 +8,7 @@ from vergeml.utils import VergeMLError
 import numpy as np
 
 @command('roc', descr="Plot a ROC curve.")
-@option('@AI', type='AI')
+@option('@AI')
 @option('class', type='Optional[str]', descr="The class to plot.")
 class ROCPlot(CommandPlugin):
 
@@ -27,10 +27,10 @@ class ROCPlot(CommandPlugin):
             labels = load_labels(env)
         except FileNotFoundError:
             raise VergeMLError("Can't plot ROC chart - not supported by model.")
-        
+
         if args['class']  and args['class'] not in labels:
             raise VergeMLError("Unknown class: " + args['class'])
-            
+
         nclasses = len(labels)
         lw = 2
 
@@ -112,4 +112,3 @@ class ROCPlot(CommandPlugin):
             plt.title('ROC curve for @' + args['@AI'])
             plt.legend(loc="lower right")
             plt.show()
-        
