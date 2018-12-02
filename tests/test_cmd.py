@@ -8,20 +8,16 @@ import getopt
 import os.path
 
 def test_parse_base_version():
-    args, _, _ = _parsebase(['-v'])
+    args, _ = _parsebase(['-v'])
     assert 'version' in args
 
-    args, _, _ = _parsebase(['--version'])
+    args, _ = _parsebase(['--version'])
     assert 'version' in args
 
 def test_parse_short_args():
-    args, _, rest = _parsebase(['-m', 'inception-v3', '--random-seed=42', 'train'])
+    args, rest = _parsebase(['-m', 'inception-v3', '--random-seed=42', 'train'])
     assert args == {'model': 'inception-v3', 'random-seed': '42'}
     assert rest == ['train']
-
-def test_invalid_input():
-    with pytest.raises(getopt.GetoptError):
-        _parsebase(['-m', '--random-seed', '42'])
 
 def test_invalid_opt():
     with pytest.raises(getopt.GetoptError):
@@ -30,9 +26,8 @@ def test_invalid_opt():
         _parsebase(['--test=10%'])
 
 def test_config_plugin():
-    args, config_args, _ = _parsebase(['--device=gpu', '--device-memory=20%'])
-    assert(args == {})
-    assert(config_args == {'device': 'gpu', 'device.memory': '20%'})
+    args, _ = _parsebase(['--device=gpu', '--device-memory=20%'])
+    assert(args == {'device': 'gpu', 'device-memory': '20%'})
     with pytest.raises(getopt.GetoptError):
         _parsebase(['--device-id=gpu', '--device-memory=20%'])
 

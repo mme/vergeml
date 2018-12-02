@@ -64,9 +64,12 @@ class Environment:
                  random_seed=None,
                  trainings_dir=None,
                  project_dir=None,
+                 cache=None,
+                 device=None,
+                 device_memory=None,
                  AI=None,
                  is_global_instance=False,
-                 config=None,
+                 # config=None,
                  plugins=PLUGINS,
                  display=DISPLAY):
         """Configure, train and save the results.
@@ -88,8 +91,6 @@ class Environment:
         """
 
         super().__init__()
-
-        config = config or {}
 
         # when called from the command line, we need to have a global instance
         if is_global_instance:
@@ -129,7 +130,8 @@ class Environment:
 
         # merge project file
         if project_file:
-            doc = self._load_yaml_and_configure(project_file, 'project file', config)
+            doc = self._load_yaml_and_configure(project_file, 'project file',
+                                                cache, device, device_memory)
 
             # the project file DOES NOT override values passed to the environment
             for k, val in doc.items():
@@ -261,15 +263,14 @@ class Environment:
                 # instantiate the model plugin
                 self.model_plugin = self.model_plugin(modelname, self.plugins)
 
-    def _load_yaml_and_configure(self, path, label, config):
+    def _load_yaml_and_configure(self, path, label, cache, device, device_memory): # pylint: disable=R0913
         doc = load_yaml_file(path, label)
         try:
             doc['device'] = parse_device(doc.get('device', {}),
-                                         device_id=config.get('device', None),
-                                         device_memory=config.get('device-memory', None))
+                                         device_id=device,
+                                         device_memory=device_memory)
 
-            doc['data'] = parse_data(doc.get('data', {}), cache=config.get('cache', None),
-                                     plugins=self.plugins)
+            doc['data'] = parse_data(doc.get('data', {}), cache=cache, plugins=self.plugins)
 
             if 'random-seed' in doc and not isinstance(doc['random-seed'], int):
                 raise VergeMLError('Invalid value option random-seed.',
