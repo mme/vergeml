@@ -8,7 +8,7 @@ import re
 import webbrowser
 
 @command('tensorboard', descr="Run Tensorboard.")
-@option('@AIs', type='List[AI]', default=[])
+@option('@AIs', type='List[@]', default=[])
 @option('host', type='Optional[str]', descr="What host to listen to.")
 @option('port', type=int, default=6006, descr="What port to serve Tensorboard on.")
 class TensorboardService(CommandPlugin):
@@ -27,12 +27,12 @@ class TensorboardService(CommandPlugin):
 
             if not os.path.exists(stats_dir):
                 continue
-           
+
             if not any(map(lambda d: d.startswith("events.out"), os.listdir(stats_dir))):
                 continue
-           
+
             ais_with_tbstats.append(dir)
-        
+
         AIs = args["@AIs"] or ais_with_tbstats
 
         if not AIs:
@@ -50,9 +50,9 @@ class TensorboardService(CommandPlugin):
         if 'host' in args and args['host']:
             cmd.append('--host')
             cmd.append(args['host'])
-        
+
         url = None
-        
+
         try:
             for line in _run_command(cmd):
                 line = line.decode('utf-8').rstrip()
@@ -62,7 +62,7 @@ class TensorboardService(CommandPlugin):
                     webbrowser.open(url)
                 print(line)
         except FileNotFoundError:
-            raise VergeMLError("Command 'tensorboard' not found.", 
+            raise VergeMLError("Command 'tensorboard' not found.",
                                "Please install tensorboard (pip install tensorboard)")
 
 def _run_command(command):

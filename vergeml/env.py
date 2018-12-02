@@ -1,35 +1,67 @@
-from vergeml.utils import VergeMLError, did_you_mean, dict_has_path, dict_get_path, dict_set_path, \
-                   parse_split
-from vergeml.plugins import PLUGINS
-from vergeml.command import Command
-from vergeml.data import Data, Labels
-from vergeml.validate import load_yaml_file, apply_config, yaml_find_definition, display_err_in_file, \
-     ValidateOptions, ValidateData, ValidateDevice
-from vergeml.random_robot import random_robot_name, ascii_robot
-from vergeml.libraries import KerasLibrary, TensorFlowLibrary, TorchLibrary, NumPyLibrary, PythonInterpreter
-from vergeml.display import DISPLAY, TrainingFeedback
-import numpy as np
+"""Environment and related classes.
+"""
+
 import os.path
 import datetime
 import time
-import re
-import yaml
 import inspect
 import csv
 from copy import deepcopy
 
+import yaml
+import numpy as np
+
+from vergeml.utils import VergeMLError, did_you_mean, parse_split
+from vergeml.utils import dict_get_path, dict_set_path
+
+from vergeml.plugins import PLUGINS
+from vergeml.data import Data, Labels
+from vergeml.random_robot import random_robot_name, ascii_robot
+from vergeml.libraries import KerasLibrary, TensorFlowLibrary, TorchLibrary
+from vergeml.libraries import NumPyLibrary, PythonInterpreter
+from vergeml.display import DISPLAY, TrainingFeedback
+from vergeml.config import yaml_find_definition, display_err_in_file, load_yaml_file
+from vergeml.config import parse_data, parse_device
+
+
+# Represent labels as list
+yaml.add_representer(Labels, lambda dump, dat: dump.represent_list(dat))
+
+# Do not use aliases.
+yaml.Dumper.ignore_aliases = lambda *_args: True
+
+# REVIEW add a method to push/pop the environment
+
 ENV = None
 
-_DEFAULT_STATS = [dict(name='acc', title='Accuracy', category="TRAINING", format='.4f', smooth=True, log=True),
-                  dict(name='loss', title='Loss', category="TRAINING", format='.4f', smooth=True, log=True),
-                  dict(name='val_acc', title='Accuracy', category="VALIDATION", format='.4f', smooth=False, log=True),
-                  dict(name='val_loss', title='Loss', category="VALIDATION", format='.4f', smooth=False, log=True),
-                  dict(name='test_acc', title='Accuracy', category="TESTING", format='.4f', smooth=False, log=False),
-                  dict(name='test_loss', title='Loss', category="TESTING", format='.4f', smooth=False, log=False),]
+_DEFAULT_STATS = [dict(name='acc', title='Accuracy', category="TRAINING", format='.4f',
+                       smooth=True, log=True),
+                  dict(name='loss', title='Loss', category="TRAINING", format='.4f',
+                       smooth=True, log=True),
+                  dict(name='val_acc', title='Accuracy', category="VALIDATION", format='.4f',
+                       smooth=False, log=True),
+                  dict(name='val_loss', title='Loss', category="VALIDATION", format='.4f',
+                       smooth=False, log=True),
+                  dict(name='test_acc', title='Accuracy', category="TESTING", format='.4f',
+                       smooth=False, log=False),
+                  dict(name='test_loss', title='Loss', category="TESTING", format='.4f',
+                       smooth=False, log=False),]
 
 class Environment:
 
-    def __init__(self,
+    _current_command = None
+
+    @property
+    def current_command(self):
+        """The name of the currently executing command"""
+        return self._current_command
+
+    @current_command.setter
+    def current_command(self, current_command):
+        self._current_command = current_command
+
+
+    def __init__(self, # pylint: disable=R0913,R0914
                  model=None,
                  project_file=None,
                  samples_dir=None,
@@ -39,9 +71,12 @@ class Environment:
                  random_seed=None,
                  trainings_dir=None,
                  project_dir=None,
+                 cache=None,
+                 device=None,
+                 device_memory=None,
                  AI=None,
                  is_global_instance=False,
-                 config={},
+                 # config=None,
                  plugins=PLUGINS,
                  display=DISPLAY):
         """Configure, train and save the results.
@@ -56,8 +91,10 @@ class Environment:
         :param trainings_dir:   The directory to save training results to. [default: trainings]
         :param project_dir:     The directory of the project. [default: current directory]
         :param AI:              Optional name of a trained AI.
-        :is_global_instance:    If true, this env can be accessed under the global var env.ENV. [default: false]
-        :config:                Additional configuration to pass to env, i.e. if not using a project file
+        :is_global_instance:    If true, this env can be accessed under the global var env.ENV.
+                                [default: false]
+        :config:                Additional configuration to pass to env, i.e. if not using a project
+                                file.
         """
 
         super().__init__()
@@ -69,74 +106,45 @@ class Environment:
 
         # setup the display
         self.display = display
+
+        # REVIEW this should be named trained_model
         # set the name of the AI if given
         self.AI = AI
+
         # this holds the model object (not the name of the model)
-        self.model = None
-        # the results class (responsible for updating data.yaml with the latest results during training)
+        self.model_plugin = None
+        # The results class (responsible for updating data.yaml with the latest results
+        # during training)
         self.results = None
-        # when a training is started, this holds the object responsible for coordinating the training
+        # When a training is started, this holds the object responsible for coordinating the
+        # training.
         self.training = None
-        # hold a proxy to the data loader
+        # Hold a proxy to the data loader.
         self._data = None
 
         self.plugins = plugins
 
-        # set up the base options from constructor arguments
-        self._config = {}
-        self._config['samples-dir'] = samples_dir
-        self._config['test-split'] = test_split
-        self._config['val-split'] = val_split
-        self._config['cache-dir'] = cache_dir
-        self._config['random-seed'] = random_seed
-        self._config['trainings-dir'] = trainings_dir
-        self._config['model'] = model
-
-        validators = {}
-         # add validators for commands
-        for k, v in plugins.all('vergeml.cmd').items():
-            cmd = Command.discover(v)
-            validators[cmd.name] = ValidateOptions(cmd.options, k, plugins=plugins)
-        # now it gets a bit tricky - we need to peek at the model name
-        # to find the right validators to create for model commands.
-        peek_model_name = model
-        peek_trainings_dir = trainings_dir
-        # to do this, we have to first have a look at the project file
-        try:
-            project_doc = load_yaml_file(project_file) if project_file else {}
-            # only update model name if empty (project file does not override command line)
-            peek_model_name = peek_model_name or project_doc.get('model', None)
-            # pick up trainings-dir in the same way
-            peek_trainings_dir = peek_trainings_dir or project_doc.get('trainings-dir', None)
-            # if we don't have a trainings dir yet, set to default
-            peek_trainings_dir = peek_trainings_dir or os.path.join(project_dir or "", "trainings")
-            # now, try to load the data.yaml file and see if we have a model definition there
-            data_doc = load_yaml_file(peek_trainings_dir, AI, "data.yaml") if AI else {}
-            # if we do, this overrides everything, also the one from the command line
-            peek_model_name = data_doc.get('model', peek_model_name)
-            # finally, if we have a model name, set up validators
-            if peek_model_name:
-                for fn in Command.find_functions(plugins.get("vergeml.model", peek_model_name),
-                                                 plugins=plugins):
-                    cmd = Command.discover(fn)
-                    validators[cmd.name] = ValidateOptions(cmd.options, cmd.name, plugins)
-        except Exception:
-            # in this case we don't care if something went wrong - the error
-            # will be reported later
-            pass
-        # finally, validators for device and data sections
-        validators['device'] = ValidateDevice('device', plugins)
-        validators['data'] = ValidateData('data', plugins)
-
+        # Set up the base options from constructor arguments.
+        self._config = {
+            'samples-dir': samples_dir,
+            'test-split': test_split,
+            'val-split': val_split,
+            'cache-dir': cache_dir,
+            'random-seed': random_seed,
+            'trainings-dir': trainings_dir,
+            'model': model
+        }
 
         # merge project file
         if project_file:
-            doc = _load_and_configure(project_file, 'project file', validators)
+            doc = self._load_yaml_and_configure(project_file, 'project file',
+                                                cache, device, device_memory)
+
             # the project file DOES NOT override values passed to the environment
-            # TODO reserved: hyperparameters and results
-            for k, v in doc.items():
+            for k, val in doc.items():
+
                 if not k in self._config or self._config[k] is None:
-                    self._config[k] = v
+                    self._config[k] = val
 
         # after the project file is loaded, fill missing values
         project_dir = project_dir or ''
@@ -148,62 +156,101 @@ class Environment:
             'random-seed': 2204,
             'trainings-dir': os.path.join(project_dir, "trainings"),
         }
-        for k, v in defaults.items():
-            if self._config[k] is None:
-                self._config[k] = v
 
-        # verify split values
+        for k, val in defaults.items():
+            if self._config[k] is None:
+                self._config[k] = val
+
+        self._validate_split(project_dir)
+
+        # Have the data_file variable in outer scope for later when reporting errors
+        data_file = None
+
+        if self.AI:
+            data_file = self._load_trained_model()
+
+        self._load_model_plugin(project_file, data_file, model is not None)
+
+        # REVIEW - need a good error message in self._load_yaml_and_configure
+        # try:
+        #     # merge device and data config
+        #     self._config.update(apply_config(config, validators))
+        # except VergeMLError as err:
+        #     # improve the error message when this runs on the command line
+        #     if is_global_instance and err.hint_key:
+        #         key = err.hint_key
+        #         err.message = f"Option --{key}: " + err.message
+        #     raise err
+
+        # always set up numpy and python
+        self.configure('python')
+        self.configure('numpy')
+
+    def _validate_split(self, project_dir):
+        """Validate the split configuration for val and test.
+        """
+
         for split in ('val-split', 'test-split'):
             spltype, splval = parse_split(self._config[split])
+
             if spltype == 'dir':
-                path = os.path.join(project_dir, splval)
+
+                # deal with relative paths
+                path = os.path.join(project_dir, splval) if not os.path.isabs(splval) else splval
+
                 if not os.path.exists(path):
-                    raise VergeMLError(f"Invalid value for option {split} - no such directory: {splval}",
-                                       f"Please set {split} to a percentage, number or directory.",
-                                        hint_key=split, hint_type='value', help_topic='split')
-                self._config[split] = path
 
-        # need to have data_file variable in outer scope for later when reporting errors
-        data_file = None
-        if self.AI:
-            ai_path = os.path.join(self._config['trainings-dir'], self.AI)
-            if not os.path.exists(ai_path):
-                raise VergeMLError("AI not found: {}".format(self.AI))
-            # merge data.yaml
-            data_file = os.path.join(self._config['trainings-dir'], self.AI, 'data.yaml')
-            if not os.path.exists(data_file):
-                raise VergeMLError("data.yaml file not found for AI {}: {}".format(self.AI, data_file))
-            doc = load_yaml_file(data_file, 'data file')
-            self._config['hyperparameters'] = doc.get('hyperparameters', {})
-            self._config['results'] = doc.get('results', {})
-            self._config['model'] = doc.get('model')
-            self.results = _Results(self, data_file)
+                    # raise if path does not exist
+                    msg = f"Invalid value for option {split} - no such directory: {splval}"
+                    suggestion = f"Please set {split} to a percentage, number or directory."
 
-        try:
-            # merge device and data config
-            self._config.update(apply_config(config, validators))
-        except VergeMLError as e:
-            # improve the error message when this runs on the command line
-            if is_global_instance and e.hint_key:
-                key = e.hint_key
-                e.message = f"Option --{key}: " + e.message
-            raise e
+                    raise VergeMLError(msg, suggestion,
+                                       hint_key=split, hint_type='value', help_topic='split')
 
+    def _load_trained_model(self):
+        """Load a trained models hyperparameters and results
+        """
+
+        train_mod_path = os.path.join(self._config['trainings-dir'], self.AI)
+        if not os.path.exists(train_mod_path):
+            raise VergeMLError("Trained model not found: {}".format(self.AI))
+
+        # Merge data.yaml
+        data_file = os.path.join(self._config['trainings-dir'], self.AI, 'data.yaml')
+        if not os.path.exists(data_file):
+            raise VergeMLError("data.yaml file not found for AI {}: {}".format(self.AI, data_file))
+
+        doc = load_yaml_file(data_file, 'data file')
+        self._config.update({
+            'hyperparameters': doc.get('hyperparameters', {}),
+            'results': doc.get('results', {}),
+            'model': doc.get('model')
+        })
+
+        # Set results. REVIEW neccessary?
+        self.results = _Results(self, data_file)
+
+        return data_file
+
+    def _load_model_plugin(self, project_file, data_file, model_via_flag):
         if self._config['model']:
             # load the model plugin
             modelname = self._config['model']
-            self.model = plugins.get("vergeml.model", modelname)
+            self.model_plugin = self.plugins.get("vergeml.model", modelname)
 
-            if not self.model:
+            if not self.model_plugin:
                 message = f"Unknown model name '{modelname}'"
-                suggestion = did_you_mean(plugins.keys('vergeml.model'), modelname) or "See 'ml help models'."
+                suggestion = (did_you_mean(self.plugins.keys('vergeml.model'), modelname)
+                              or "See 'ml help models'.")
+
+                global ENV # pylint: disable=W0603
 
                 # if model was passed in via --model
-                if model and is_global_instance:
+                if model_via_flag and ENV == self:
                     message = f"Invalid value for option --model: {message}"
                 else:
                     res = None
-                    if not res and data_file:
+                    if data_file:
                         # first check if model was defined in the data file
                         res = _check_definition(data_file, 'model', 'value')
                     if not res and project_file:
@@ -213,29 +260,54 @@ class Environment:
                         filename, definition = res
                         line, column, length = definition
                         # display a nice error message
-                        message = display_err_in_file(filename, line, column, f"{message} {suggestion}", length)
+                        message = display_err_in_file(filename, line, column,
+                                                      f"{message} {suggestion}", length)
                         # set suggestion to None since it is now contained in message
                         suggestion = None
+
                 raise VergeMLError(message, suggestion)
             else:
                 # instantiate the model plugin
-                self.model = self.model(modelname, plugins)
+                self.model_plugin = self.model_plugin(modelname, self.plugins)
 
-        # update env from validators
-        for _, plugin in validators.items():
-            for k, v in plugin.values.items():
-                self._config[k] = v
+    def _load_yaml_and_configure(self, path, label, cache, device, device_memory): # pylint: disable=R0913
+        doc = load_yaml_file(path, label)
+        try:
+            doc['device'] = parse_device(doc.get('device', {}),
+                                         device_id=device,
+                                         device_memory=device_memory)
 
-        # always set up numpy and python
-        self.configure('python')
-        self.configure('numpy')
+            doc['data'] = parse_data(doc.get('data', {}), cache=cache, plugins=self.plugins)
+
+            if 'random-seed' in doc and not isinstance(doc['random-seed'], int):
+                raise VergeMLError('Invalid value option random-seed.',
+                                   'random-seed must be an integer value.',
+                                   hint_type='value',
+                                   hint_key='random-seed')
+        except VergeMLError as err:
+            if err.hint_key:
+                key, kind = err.hint_key, err.hint_type
+                with open(path) as file:
+                    definition = yaml_find_definition(file, key, kind)
+                if definition:
+                    line, column, length = definition
+                    message = display_err_in_file(path, line, column, str(err), length)
+                    err.message = message
+                    # clear suggestion because it is already contained in the formatted error message.
+                    err.suggestion = None
+                    raise err
+                else:
+                    raise err
+            else:
+                raise err
+        return doc
 
     def get(self, path):
         """Get a value by its path.
 
         For example, to access the variable 'id' in the dict 'device', use device.id as path.
         """
-        return dict_get_path(self._config, path, None)
+        return deepcopy(dict_get_path(self._config, path, None))
 
     def set(self, path, value):
         """Set a value by its path.
@@ -332,6 +404,18 @@ class Environment:
         # create the training object
         stats_file = os.path.join(self.stats_dir(), "stats.csv")
         self.training = Training(self, stats_file)
+
+        # save the original configuration
+        config_file = os.path.join(self.AI_dir(), "configuration.yaml")
+        config = deepcopy(self._config)
+
+        del config['hyperparameters']
+        del config['results']
+        del config['random_robot']
+
+        with open(config_file, "w") as file:
+            yaml.dump(config, file, default_flow_style=False)
+
         return self.AI
 
     def end_training(self, final_results={}):
@@ -437,47 +521,16 @@ class Environment:
                 res[param] = methods[param]()
         return res
 
-    def set_defaults(self, cmd, args, plugins=PLUGINS):
-        if self.model:
-            self.model.set_defaults(cmd, args, self)
-        validators = dict(device=ValidateDevice('device', plugins),
-                            data=ValidateData('data', plugins))
-
-        config = dict(device=self.get('device'), data=self.get('data'))
-        apply_config(config, validators)
-        # update env from validators
-        for _, plugin in validators.items():
-            for k, v in plugin.values.items():
-                self._config[k] = v
+    def set_defaults(self, cmd, args):
+        """Set up environment defaults before executing the command.
+        """
+        if self.model_plugin:
+            self.model_plugin.set_defaults(cmd, args, self)
+            self._config['device'] = parse_device(self._config.get('device', {}))
+            self._config['data'] = parse_data(self._config.get('data', {}))
 
 
 
-def _load_and_configure(file, label, validators):
-    doc = load_yaml_file(file, label)
-    try:
-        doc = apply_config(doc, validators)
-        if 'random-seed' in doc and not isinstance(doc['random-seed'], int):
-            raise VergeMLError('Invalid value option random-seed.',
-                               'random-seed must be an integer value.',
-                               hint_type='value',
-                               hint_key='random-seed')
-    except VergeMLError as e:
-        if e.hint_key:
-            key, kind = e.hint_key, e.hint_type
-            with open(file) as f:
-                definition = yaml_find_definition(f, key, kind)
-            if definition:
-                line, column, length = definition
-                message = display_err_in_file(file, line, column, str(e), length)
-                e.message = message
-                # clear suggestion because it is already contained in the formatted error message.
-                e.suggestion = None
-                raise e
-            else:
-                raise e
-        else:
-            raise e
-    return doc
 
 def _check_definition(filename, key, kind):
     if not filename:
@@ -647,7 +700,6 @@ class _StatsWriter:
                 row.append(None)
 
         self.writer.writerow(row)
-        pass
 
     def end(self):
         if not self.ks:
