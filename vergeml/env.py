@@ -60,7 +60,6 @@ class Environment:
     def current_command(self, current_command):
         self._current_command = current_command
 
-
     def __init__(self, # pylint: disable=R0913,R0914
                  model=None,
                  project_file=None,
@@ -413,6 +412,9 @@ class Environment:
         del config['hyperparameters']
         del config['results']
         del config['random-robot']
+
+        cmd, args = self.current_command
+        config[cmd.name] = args
 
         with open(config_file, "w") as file:
             yaml.dump(config, file, default_flow_style=False)

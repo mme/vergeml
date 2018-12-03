@@ -296,8 +296,14 @@ def parse_command(command, section):
     """
     section = section or {}
     res = {}
+    subk = []
 
-    _raise_unknown_option(command.name, [o.name for o in command.options],
+    sub_option = next(filter(lambda c: c.subcommand, command.options), None)
+
+    if sub_option:
+        subk = list(command.plugins.keys(sub_option.subcommand))
+
+    _raise_unknown_option(command.name, [o.name for o in command.options] + subk,
                           section.keys(), command.name)
 
     for option in command.options:
