@@ -387,7 +387,7 @@ class Environment:
         else:
             self.display.print("")
 
-        results = {'created_at': time.mktime(created.timetuple())}
+        results = {'created-at': time.mktime(created.timetuple())}
         if self.get('data.input.type'):
             results['num-samples'] = self.data.num_samples('train')
 
@@ -400,7 +400,7 @@ class Environment:
         self.results = _Results(self, data_file)
         # results will do the rest. As results periodically updates data.yaml,
         # it will save hyperparameters too
-        self.results.add(dict(status="RUNNING", training_start=time.time()))
+        self.results.add({'status': "RUNNING", 'training-start': time.time()})
         self.results.flush()
         # create the training object
         stats_file = os.path.join(self.stats_dir(), "stats.csv")
@@ -428,7 +428,7 @@ class Environment:
         assert self.training, "Must call start_training() first."
         final_results = deepcopy({k.replace('_', '-'):v for k, v in final_results.items()})
         self.results.add(final_results)
-        self.results.add(dict(status="FINISHED", training_end=time.time()))
+        self.results.add({'status': "FINISHED", 'training_end': time.time()})
         self.results.flush()
         self.training.update(write_stats=False, **final_results)
         self.training.end()
@@ -438,7 +438,7 @@ class Environment:
         """Cancel a training session.
         """
         assert self.training, "Must call start_training() first."
-        self.results.add(dict(status="CANCELED", training_end=time.time()))
+        self.results.add({'status': "CANCELED", 'training-end': time.time()})
         self.results.flush()
         self.training.end()
         self.training = None
