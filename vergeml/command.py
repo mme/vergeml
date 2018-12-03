@@ -10,7 +10,6 @@ from vergeml.utils import did_you_mean, VergeMLError, parse_trained_models
 from vergeml.option import Option
 from vergeml.config import parse_command
 
-# REVIEW all the type checking and AI types
 
 _CMD_META_KEY = '__vergeml_command__'
 
@@ -116,7 +115,7 @@ def command(name=None, # pylint: disable=R0913
             long_descr=None,
             examples=None,
             free_form=False,
-            kind='command'):
+            type='command'):
 
     """Define a model command.
 
@@ -142,7 +141,7 @@ def command(name=None, # pylint: disable=R0913
                       examples=examples,
                       options=options,
                       free_form=free_form,
-                      kind=kind)
+                      type=type)
 
         if inspect.isclass(obj):
             setattr(obj, _CMD_META_KEY, cmd)
@@ -161,14 +160,14 @@ def train(name=None, descr=None, long_descr=None, examples=None, free_form=False
 
     See `command` for parameter documentation."""
     return command(name=name, descr=descr, long_descr=long_descr, examples=examples,
-                   free_form=free_form, kind='train')
+                   free_form=free_form, type='train')
 
 def predict(name=None, descr=None, long_descr=None, examples=None, free_form=False):
     """Define a prediction command.
 
     See `command` for parameter documentation."""
     return command(name=name, descr=descr, long_descr=long_descr, examples=examples,
-                   free_form=free_form, kind='predict')
+                   free_form=free_form, type='predict')
 
 class Command: # pylint: disable=R0902
     """A command can be called directly from the command line.
@@ -177,7 +176,7 @@ class Command: # pylint: disable=R0902
     # REVIEW refactor kind to 'type'
     def __init__(self, # pylint: disable=R0913
                  name, descr=None, long_descr=None, examples=None, free_form=False,
-                 kind='command', options=None, plugins=PLUGINS):
+                 type='command', options=None, plugins=PLUGINS):
         """Construct a command.
 
         See the documentation of the decorator function ´command`.
@@ -188,7 +187,7 @@ class Command: # pylint: disable=R0902
         self.examples = examples
         self.options = options or []
         self.plugins = plugins
-        self.kind = kind
+        self.type = type
         self.free_form = free_form
 
         at_option = list(filter(lambda o: o.is_at_option(), options))

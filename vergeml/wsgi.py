@@ -18,7 +18,7 @@ class WSGIApp:
         self.fns = OrderedDict()
         for model_fn in Command.find_functions(env.model_plugin):
             cmd = Command.discover(model_fn)
-            if cmd.kind == 'predict':
+            if cmd.type == 'predict':
                 self.fns[cmd.name] = (cmd, model_fn)
 
         if not len(self.fns):
