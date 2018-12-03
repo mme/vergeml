@@ -32,7 +32,6 @@ class _CommandCallProxy:
         # executed
         env.current_command = cmd.name
 
-
         # Free form commands deal with this manually
         if not cmd.free_form:
             # If existent, read settings from the config file
