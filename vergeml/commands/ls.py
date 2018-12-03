@@ -41,112 +41,19 @@ class ListCommand(CommandPlugin):
 
     def __call__(self, args, env):
 
-        # parse and partition into normal and comparison args
+        # Parse and partition into normal and comparison args.
         args, cargs = _parse_args(args)
 
-        train_dir = env.get("trainings-dir")
-
-        if not os.path.exists(train_dir):
-            print("No trainings found", file=sys.stderr)
+        # When trainings dir does not exist, print an error and exit
+        if not os.path.exists(env.get('trainings-dir')):
+            print("No trainings found.", file=sys.stderr)
             return
 
-        info = {}
-        hyper = {}
+        info, hyper = _find_trained_models(args, env)
 
-        for AI in os.listdir(train_dir):
-            data_yaml = os.path.join(train_dir, AI, 'data.yaml')
-            if os.path.isfile(data_yaml):
-                with open(data_yaml) as f:
-                    doc = yaml.safe_load(f)
-            else:
-                doc = {}
-            info[AI] = {}
-            hyper[AI] = {}
+        theader, tdata, left_align = _format_table(args, cargs, info, hyper)
 
-            if 'model' in doc:
-                info[AI]['model'] = doc['model']
-
-            if 'results' in doc:
-                info[AI].update(doc['results'])
-
-            if 'hyperparameters' in doc:
-                hyper[AI].update(doc['hyperparameters'])
-
-        if args['columns']:
-            theader = ['AI'] + [s.strip() for s in args['columns'].split(",")]
-            exclude = []
-        else:
-            theader = ['AI', 'model', 'status', 'num_samples', 'training_start', 'epochs']
-            exclude = ['training_end', 'steps', 'created_at']
-
-        sort = [s.strip() for s in args['sort'].split(",")]
-
-        info = OrderedDict(sorted(info.items(), reverse=(args['order'] == 'asc'),
-                           key=lambda x: [x[1].get(s, 0) for s in sort]))
-
-        tdata = []
-        left_align = set([0])
-
-        for AI, results in info.items():
-            rdata = [""] * len(theader)
-            rdata[0] = "@" + AI
-
-            if not _filter(results, hyper[AI], cargs):
-                continue
-
-            for k, v in sorted(results.items()):
-                if k in exclude and not args['columns']:
-                    continue
-
-                if not k in theader and not args['columns'] and isinstance(v, (str, int, float)):
-                    theader.append(k)
-                    rdata.append(None)
-                if k in theader:
-                    pos = theader.index(k)
-
-                    if k in ('training_start', 'training_end', 'created_at'):
-                        v = datetime.utcfromtimestamp(v)
-                        v = v.strftime("%Y-%m-%d %H:%M")
-                    elif isinstance(v, float):
-                        v = "%.4f" % v
-                    elif isinstance(v, str):
-                        left_align.add(pos)
-
-                    rdata[pos] = v
-
-            for k, v in sorted(hyper[AI].items()):
-                if k in theader:
-                    pos = theader.index(k)
-                    if isinstance(v, float):
-                        v = "%.4f" % v
-                    elif isinstance(v, str):
-                        left_align.add(pos)
-
-                    rdata[pos] = v
-
-            tdata.append(rdata)
-
-        if args['output'] == 'table':
-            if not tdata:
-                return
-            tdata.insert(0, theader)
-            print(DISPLAY.table(tdata, left_align=left_align).getvalue(fit=True))
-        elif args['output'] == 'json':
-            res = []
-            for row in tdata:
-                res.append(dict(zip(theader, row)))
-            print(json.dumps(res))
-
-        elif args['output'] == 'csv':
-            buffer = io.StringIO()
-
-            writer = csv.writer(buffer)
-            writer.writerow(theader)
-            for row in tdata:
-                writer.writerow(row)
-            val = buffer.getvalue()
-            val = val.replace('\r', '')
-            print(val.strip())
+        _output_table(args['output'], theader, tdata, left_align)
 
 def _parse_args(args):
     args = args[1]
@@ -175,13 +82,125 @@ def _parse_args(args):
 
     return args, cargs
 
+def _find_trained_models(args, env):
+    info = {}
+    hyper = {}
+    train_dir = env.get('trainings-dir')
+
+    for trained_model in os.listdir(train_dir):
+        data_yaml = os.path.join(train_dir, trained_model, 'data.yaml')
+        if os.path.isfile(data_yaml):
+            with open(data_yaml) as file:
+                doc = yaml.safe_load(file)
+        else:
+            doc = {}
+        info[trained_model] = {}
+        hyper[trained_model] = {}
+
+        if 'model' in doc:
+            info[trained_model]['model'] = doc['model']
+
+        if 'results' in doc:
+            info[trained_model].update(doc['results'])
+
+        if 'hyperparameters' in doc:
+            hyper[trained_model].update(doc['hyperparameters'])
+
+    sort = [s.strip() for s in args['sort'].split(",")]
+
+    info = OrderedDict(sorted(info.items(), reverse=(args['order'] == 'asc'),
+                              key=lambda x: [x[1].get(s, 0) for s in sort]))
+    return info, hyper
+
+def _format_table(args, cargs, info, hyper): # pylint: disable=R0912
+    theader = ['AI', 'model', 'status', 'num_samples', 'training_start', 'epochs']
+    exclude = ['training_end', 'steps', 'created_at']
+
+    if args['columns']:
+        theader = ['AI'] + [s.strip() for s in args['columns'].split(",")]
+        exclude = []
+
+    tdata = []
+    left_align = set([0])
+
+    for trained_model, results in info.items():
+        rdata = [""] * len(theader)
+        rdata[0] = "@" + trained_model
+
+        if not _filter(results, hyper[trained_model], cargs):
+            continue
+
+        for k, val in sorted(results.items()):
+            if k in exclude and not args['columns']:
+                continue
+
+            if not k in theader and not args['columns'] and isinstance(val, (str, int, float)):
+                theader.append(k)
+                rdata.append(None)
+
+            if k in theader:
+                pos = theader.index(k)
+
+                if k in ('training_start', 'training_end', 'created_at'):
+                    val = datetime.utcfromtimestamp(val)
+                    val = val.strftime("%Y-%m-%d %H:%M")
+                elif isinstance(val, float):
+                    val = "%.4f" % val
+                elif isinstance(val, str):
+                    left_align.add(pos)
+
+                rdata[pos] = val
+
+        for k, val in sorted(hyper[trained_model].items()):
+
+            if k in theader:
+                pos = theader.index(k)
+                if isinstance(val, float):
+                    val = "%.4f" % val
+                elif isinstance(val, str):
+                    left_align.add(pos)
+
+                rdata[pos] = val
+
+        tdata.append(rdata)
+
+    return theader, tdata, left_align
+
+def _output_table(output, theader, tdata, left_align):
+
+    if not tdata:
+        print("No matching trained models found.", file=sys.stderr)
+
+    if output == 'table':
+        if not tdata:
+            return
+        tdata.insert(0, theader)
+        print(DISPLAY.table(tdata, left_align=left_align).getvalue(fit=True))
+
+    elif output == 'json':
+        res = []
+        for row in tdata:
+            res.append(dict(zip(theader, row)))
+        print(json.dumps(res))
+
+    elif output == 'csv':
+        buffer = io.StringIO()
+
+        writer = csv.writer(buffer)
+        writer.writerow(theader)
+        for row in tdata:
+            writer.writerow(row)
+        val = buffer.getvalue()
+        val = val.replace('\r', '')
+        print(val.strip())
+
 def _filter(info, hyper, comp_args):
     try:
         cols = {}
         cols.update(hyper)
         cols.update(info)
         res = True
-        for col, op, val in comp_args:
+        for col, opr, val in comp_args:
 
             if not col in cols:
                 return False
@@ -193,21 +212,21 @@ def _filter(info, hyper, comp_args):
             elif isinstance(cval, float):
                 val = float(val)
 
-            if op == '-eq':
+            if opr == '-eq':
                 res = res and (cval == val)
-            elif op == '-neq':
+            elif opr == '-neq':
                 res = res and (cval != val)
-            elif op == '-gt':
+            elif opr == '-gt':
                 res = res and (cval > val)
-            elif op == '-lt':
+            elif opr == '-lt':
                 res = res and (cval < val)
-            elif op == '-gte':
+            elif opr == '-gte':
                 res = res and (cval >= val)
-            elif op == '-lte':
+            elif opr == '-lte':
                 res = res and (cval <= val)
 
             if not res:
                 return False
         return res
-    except: # pylint: disable=W0703
+    except: # pylint: disable=W0702
         return False
