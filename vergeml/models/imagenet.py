@@ -11,7 +11,7 @@ class ImageNetModelPlugin(ModelPlugin):
 
     @train('train', descr='Train an image classifier.')
     @option('epochs', 5)
-    @option('cnn', 'resnet-50', 'Name of the pretrained network.')
+    @option('architecture', 'resnet-50', 'Name of the pretrained network.')
     @option('variant', 'auto', 'Network variant.')
     @option('size', "auto", 'Image input size.', type='Union[int,str]')
     @option('alpha', 1.0, 'Network alpha value.')
@@ -36,13 +36,13 @@ class ImageNetModelPlugin(ModelPlugin):
 
         from vergeml.sources.features import get_image_size, evaluate_args
 
-        evaluate_args(args['cnn'], env.get('trainings-dir'), args['variant'], args['alpha'], args['size'])
+        evaluate_args(args['architecture'], env.get('trainings-dir'), args['variant'], args['alpha'], args['size'])
 
         # configure libraries
         env.configure('keras')
 
         self.model = ImageNetModel()
-        size = get_image_size(args['cnn'], args['variant'], args['size'])
+        size = get_image_size(args['architecture'], args['variant'], args['size'])
 
 
         # gather arguments
@@ -101,8 +101,8 @@ class ImageNetModelPlugin(ModelPlugin):
         # load the AI
         self.model = ImageNetModel()
         input_size = env.get("hyperparameters.size")
-        cnn = env.get("hyperparameters.cnn")
-        self.model.load(os.path.join(env.checkpoints_dir()), cnn, input_size)
+        architecture = env.get("hyperparameters.architecture")
+        self.model.load(os.path.join(env.checkpoints_dir()), architecture, input_size)
 
     def set_defaults(self, cmd, args, env):
         if cmd in ('train', 'preprocess'):
@@ -111,7 +111,7 @@ class ImageNetModelPlugin(ModelPlugin):
                 type_ = env.get(f"data.{k}.type")
 
                 output_layer = args.get('output-layer', 'last')
-                cnn = args.get('cnn', 'resnet-50')
+                architecture = args.get('architecture', 'resnet-50')
                 variant = args.get('variant', 'auto')
                 size = args.get('size', 'auto')
                 alpha = args.get('alpha', 1.0)
@@ -121,7 +121,7 @@ class ImageNetModelPlugin(ModelPlugin):
 
                     env.set(f"data.{k}.type", 'labeled-image-features')
                     env.set(f"data.{k}.output-layer", output_layer)
-                    env.set(f"data.{k}.cnn", cnn)
+                    env.set(f"data.{k}.architecture", architecture)
                     env.set(f"data.{k}.variant", variant)
                     env.set(f"data.{k}.size", size)
                     env.set(f"data.{k}.alpha", alpha)
@@ -136,7 +136,7 @@ class ImageNetModel:
     image_size = None
     preprocess_input = None
 
-    def load(self, model_dir, cnn, image_size):
+    def load(self, model_dir, architecture, image_size):
         from keras.models import load_model
         from vergeml.sources.features import get_preprocess_input
         labels_txt = os.path.join(model_dir, "labels.txt")
@@ -152,7 +152,7 @@ class ImageNetModel:
 
         self.model = load_model(model_h5)
         self.image_size = image_size
-        self.preprocess_input = get_preprocess_input(cnn)
+        self.preprocess_input = get_preprocess_input(architecture)
 
     def train(self,
               labels,
@@ -161,7 +161,7 @@ class ImageNetModel:
               xy_test,
               epochs=20,
               batch_size=64,
-              cnn="resnet-50",
+              architecture="resnet-50",
               variant="auto",
               size="auto",
               alpha=1.0,
@@ -179,25 +179,25 @@ class ImageNetModel:
               checkpoints_dir="checkpoints",
               stats_dir='stats'):
 
-        from vergeml.sources.features import get_imagenet_cnn, get_image_size, get_preprocess_input
+        from vergeml.sources.features import get_imagenet_architecture, get_image_size, get_preprocess_input
         from keras.layers import Dense, Input
         from keras.callbacks import ModelCheckpoint, EarlyStopping, TensorBoard
         from keras.models import Model
         from keras import optimizers
 
-        if cnn.startswith("@"):
+        if architecture.startswith("@"):
             raise NotImplementedError
 
         self.labels = labels
         nclasses = len(self.labels)
         num_batches = len(xy_train)
-        self.image_size = get_image_size(cnn, variant, size)
-        self.preprocess_input = get_preprocess_input(cnn)
+        self.image_size = get_image_size(architecture, variant, size)
+        self.preprocess_input = get_preprocess_input(architecture)
 
         if not os.path.exists(checkpoints_dir):
             os.makedirs(checkpoints_dir)
 
-        self.base_model = get_imagenet_cnn(cnn, variant, size, alpha, output_layer, include_top=False, weights='imagenet')
+        self.base_model = get_imagenet_architecture(architecture, variant, size, alpha, output_layer, include_top=False, weights='imagenet')
         input_size = np.array(self.base_model.layers[-1].output_shape[1:]).prod()
         input_layer = Input(shape=(input_size,))
 
