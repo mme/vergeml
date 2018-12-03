@@ -1,9 +1,16 @@
+# pylint: disable=C0302
+
+"""Random robot names and ascii art.
+"""
+
 import random
 import os.path
 from datetime import datetime
 
 
 def random_robot_name(moment_of_birth, dest=None):
+    """Construct a random robot name.
+    """
     random.seed(moment_of_birth)
     adj = random.choice(_ADJ)
     noun = random.choice(_NOUN)
@@ -11,24 +18,26 @@ def random_robot_name(moment_of_birth, dest=None):
 
     if dest and os.path.exists(os.path.join(dest, name)):
         return random_robot_name(datetime.now(), dest)
-    else:
-        return name
+
+    return name
 
 
 def ascii_robot(moment_of_birth, name, include_phrase=True):
+    """Generate random robot ascii art.
+    """
     random.seed(moment_of_birth)
 
-    def paste(a, *bs):
+    def paste(cur, *lines):
 
-        a = list(a)
-        for b in bs:
-            if len(b) > len(a):
-                a += [' '] * (len(b) - len(a))
+        cur = list(cur)
+        for line in lines:
+            if len(line) > len(cur):
+                cur += [' '] * (len(line) - len(cur))
 
-            for i, c in enumerate(b):
-                if c != " ":
-                    a[i] = c
-        return "".join(a)
+            for i, char in enumerate(line):
+                if char != " ":
+                    cur[i] = char
+        return "".join(cur)
 
     if random.choice([2, 3]) == 2:
         top = random.choice(ANTENNA)
@@ -261,13 +270,15 @@ FEET3 = [
 
 
 def random_phrase(robot_name):
+    """Construct a random phrase about robot_name.
+    """
     phrase = random.choice(_PHRASES)
     parts = [random.choice(part) if isinstance(part, tuple) else part for part in phrase]
     res = " ".join(map(lambda x: x.strip(), parts))
-    for c in (":", ".", "!", "?"):
-        res = res.replace(" "+c, c)
-    for c in ("'", '"'):
-        res = res.replace(c+" ", c)
+    for char in (":", ".", "!", "?"):
+        res = res.replace(" " + char, char)
+    for char in ("'", '"'):
+        res = res.replace(char + " ", char)
 
     res = res.replace("$name", "@" + robot_name)
     if res[-1] not in (".", "!", "?"):
@@ -280,7 +291,7 @@ _PHRASES = (
     ("$name wants to make",
      ("the world", "the endless universe", "nature", "San Francisco", "the oceans", "Europe",
       "the moon", "your thought palace", "the inside of vulcanos", "your hometown",
-      "mars", "supermarkets",  "the inside of your car", "public transport",
+      "mars", "supermarkets", "the inside of your car", "public transport",
       "your mom's house", "the vast amount of worlds to be discovered",
       "the environment", "your memories", "someone's garage", "kitchens",
       "the matrix", "Gotham City", "LV-426", "Dune", "schools", "bus stops",
@@ -354,7 +365,7 @@ _PHRASES = (
      ("mission", "aim", "assignment", "duty", "goal", "thing on its mind",
       "objective", "thing on its todo list", "thing it cares about",
       "thing to get straight", "motive", "mission statement", "guiding principle",
-                   "supreme goal"),
+      "supreme goal"),
      ":",
      ("to make you smile", "to make you happy", "to make you proud",
       "to improve its performance", "to do what has to be done",

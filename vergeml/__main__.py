@@ -149,6 +149,8 @@ def _forgive_wrong_option_order(argv):
     return first_part + second_part
 
 def run(argv, plugins=PLUGINS):
+    """Run from command line.
+    """
     try:
         argv = _forgive_wrong_option_order(argv)
         args, rest = _parsebase(argv)
@@ -161,8 +163,8 @@ def run(argv, plugins=PLUGINS):
             raise VergeMLError(f"Invalid option.", help_topic='options')
 
     if 'version' in args:
-       print_version()
-       exit()
+        print_version()
+        exit()
 
     args = _prepare_args(args)
     ai_names, after_names = parse_trained_models(rest)

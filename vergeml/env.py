@@ -405,7 +405,7 @@ class Environment:
         self.training = Training(self, stats_file)
 
         # save the original configuration
-        config_file = os.path.join(self.trained_model_dir(), "configuration.yaml")
+        config_file = os.path.join(self.trained_model_dir(), "vergeml.yaml")
         config = deepcopy(self._config)
 
         del config['hyperparameters']
