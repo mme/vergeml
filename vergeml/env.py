@@ -38,13 +38,13 @@ _DEFAULT_STATS = [dict(name='acc', title='Accuracy', category="TRAINING", format
                        smooth=True, log=True),
                   dict(name='loss', title='Loss', category="TRAINING", format='.4f',
                        smooth=True, log=True),
-                  dict(name='val_acc', title='Accuracy', category="VALIDATION", format='.4f',
+                  dict(name='val-acc', title='Accuracy', category="VALIDATION", format='.4f',
                        smooth=False, log=True),
-                  dict(name='val_loss', title='Loss', category="VALIDATION", format='.4f',
+                  dict(name='val-loss', title='Loss', category="VALIDATION", format='.4f',
                        smooth=False, log=True),
-                  dict(name='test_acc', title='Accuracy', category="TESTING", format='.4f',
+                  dict(name='test-acc', title='Accuracy', category="TESTING", format='.4f',
                        smooth=False, log=False),
-                  dict(name='test_loss', title='Loss', category="TESTING", format='.4f',
+                  dict(name='test-loss', title='Loss', category="TESTING", format='.4f',
                        smooth=False, log=False),]
 
 class Environment:
@@ -389,10 +389,10 @@ class Environment:
 
         results = {'created_at': time.mktime(created.timetuple())}
         if self.get('data.input.type'):
-            results['num_samples'] = self.data.num_samples('train')
+            results['num-samples'] = self.data.num_samples('train')
 
         self.set('hyperparameters', hyperparameters)
-        self.set('random_robot', robot)
+        self.set('random-robot', robot)
         self.set('results', results)
 
         data_file = os.path.join(self.trained_model_dir(), "data.yaml")
@@ -412,7 +412,7 @@ class Environment:
 
         del config['hyperparameters']
         del config['results']
-        del config['random_robot']
+        del config['random-robot']
 
         with open(config_file, "w") as file:
             yaml.dump(config, file, default_flow_style=False)
@@ -426,7 +426,7 @@ class Environment:
                               final accuracy values if you save the best performing epoch.
         """
         assert self.training, "Must call start_training() first."
-        final_results = deepcopy(final_results)
+        final_results = deepcopy({k.replace('_', '-'):v for k, v in final_results.items()})
         self.results.add(final_results)
         self.results.add(dict(status="FINISHED", training_end=time.time()))
         self.results.flush()
@@ -434,7 +434,7 @@ class Environment:
         self.training.end()
         self.training = None
 
-    def cancel_training(self, final_results={}):
+    def cancel_training(self):
         """Cancel a training session.
         """
         assert self.training, "Must call start_training() first."
@@ -549,7 +549,7 @@ class _Results:
 
     def add(self, data):
         for k, v in data.items():
-            self.env.set('results.' + k, v)
+            self.env.set('results.' + k.replace('_', '-'), v)
         self._sync()
 
     def flush(self):
@@ -689,6 +689,9 @@ class _StatsWriter:
     def write(self, epoch, step, data):
         if not self.ks:
             return
+
+        # Make sure that keys have no underscores.
+        data = {k.replace('_', '-'):v for k, v in data.items()}
 
         row = [epoch, step]
         for k in self.ks:
