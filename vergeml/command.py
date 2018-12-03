@@ -36,7 +36,6 @@ class _CommandCallProxy:
         # Free form commands deal with this manually
         if not cmd.free_form:
             # If existent, read settings from the config file
-            # REVIEW - catch the exception and print a pretty error!
             config = parse_command(cmd, env.get(cmd.name))
 
             # Set missing args from the config file

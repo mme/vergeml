@@ -16,6 +16,7 @@ from vergeml.command import command, CommandPlugin, Command
 from vergeml.option import option
 from vergeml.utils import VergeMLError
 from vergeml.display import DISPLAY
+from vergeml.config import parse_command
 
 EXAMPLES = """
 $ ml list -sacc
@@ -34,7 +35,7 @@ $ ml list test_acc -gt 0.8
 @command('list', descr="List trained models.", free_form=True, examples=EXAMPLES) # pylint: disable=R0903
 @option('sort', descr="By which column to sort.", default='created-at', short='s')
 @option('order', descr="Sort order.", default='asc', short='o', validate=('asc', 'desc'))
-@option('columns', descr="Which columns to show.", type='Optional[str]', short='c')
+@option('columns', descr="Which columns to show.", type='Optional[Union[str, List[str]]]', short='c')
 @option('output', descr="Output format.", default='table', validate=('table', 'csv', 'json'))
 class ListCommand(CommandPlugin):
     """List trained models"""
@@ -42,7 +43,7 @@ class ListCommand(CommandPlugin):
     def __call__(self, args, env):
 
         # Parse and partition into normal and comparison args.
-        args, cargs = _parse_args(args)
+        args, cargs = _parse_args(args, env)
 
         # When trainings dir does not exist, print an error and exit
         if not os.path.exists(env.get('trainings-dir')):
@@ -55,7 +56,7 @@ class ListCommand(CommandPlugin):
 
         _output_table(args['output'], theader, tdata, left_align)
 
-def _parse_args(args):
+def _parse_args(args, env):
     args = args[1]
 
     comps = []
@@ -75,10 +76,18 @@ def _parse_args(args):
     cmd.free_form = False
     args.insert(0, 'list')
     args = cmd.parse(args)
-    args.setdefault('sort', 'created-at')
-    args.setdefault('order', 'asc')
-    args.setdefault('columns', None)
-    args.setdefault('output', 'table')
+
+    # If existent, read settings from the config file
+    config = parse_command(cmd, env.get(cmd.name))
+
+    # Set missing args from the config file
+    for k, arg in config.items():
+        args.setdefault(k, arg)
+
+    # Set missing args from default
+    for opt in cmd.options:
+        if opt.name not in args and (opt.default is not None or not opt.is_required()):
+            args[opt.name] = opt.default
 
     return args, cargs
 
@@ -117,7 +126,11 @@ def _format_table(args, cargs, info, hyper): # pylint: disable=R0912
     exclude = ['training-end', 'steps', 'created-at']
 
     if args['columns']:
-        theader = ['AI'] + [s.strip() for s in args['columns'].split(",")]
+        cols = args['columns']
+        if isinstance(cols, str):
+            cols = cols.split(",")
+
+        theader = ['AI'] + [s.strip() for s in cols]
         exclude = []
 
     tdata = []
