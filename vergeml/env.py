@@ -217,7 +217,8 @@ class Environment:
         # Merge data.yaml
         data_file = os.path.join(self._config['trainings-dir'], self.trained_model, 'data.yaml')
         if not os.path.exists(data_file):
-            raise VergeMLError("data.yaml file not found for {}: {}".format(self.trained_model, data_file))
+            raise VergeMLError("data.yaml file not found for {}: {}".format(
+                self.trained_model, data_file))
 
         doc = load_yaml_file(data_file, 'data file')
         self._config.update({
@@ -284,15 +285,16 @@ class Environment:
                                    hint_type='value',
                                    hint_key='random-seed')
         except VergeMLError as err:
+
             if err.hint_key:
-                key, kind = err.hint_key, err.hint_type
+
                 with open(path) as file:
-                    definition = yaml_find_definition(file, key, kind)
+                    definition = yaml_find_definition(file, err.hint_key, err.hint_type)
+
                 if definition:
                     line, column, length = definition
-                    message = display_err_in_file(path, line, column, str(err), length)
-                    err.message = message
-                    # clear suggestion because it is already contained in the formatted error message.
+                    err.message = display_err_in_file(path, line, column, str(err), length)
+                    # clear suggestion because it is already contained in the error message.
                     err.suggestion = None
                     raise err
                 else:
@@ -561,7 +563,7 @@ class _Results:
                         hyperparameters=self._convert(self.env.get('hyperparameters')),
                         results=self._convert(self.env.get('results')))
             with open(self.path, "w") as f:
-                yaml.dump(data, f)
+                yaml.dump(data, f, default_flow_style=False)
 
     def _convert(self, vals):
         res = {}
