@@ -26,7 +26,6 @@ class _CommandCallProxy:
 
     @staticmethod
     def _wrap_call(cmd, fun, args, env):
-        import ipdb; ipdb.set_trace()  # breakpoint efe4d056 //
         fn_args = deepcopy(args)
 
         config_name = cmd.name
