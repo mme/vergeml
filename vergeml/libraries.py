@@ -64,39 +64,40 @@ class KerasLibrary(Library):
                 self.current_step = 0
 
             def on_train_begin(self, logs=None):
-                logs = self._remove_keys(logs)
+                logs = KerasCallback._xform_logs(logs)
                 self.callback = env.progress_callback(self.params['epochs'], self.params['steps'],
                                                       self.display_progress, self.stats)
 
             def on_train_end(self, logs=None):
-                logs = self._remove_keys(logs)
+                logs = KerasCallback._xform_logs(logs)
                 self.callback(self.current_epoch, self.current_step, **logs)
 
             def on_epoch_begin(self, epoch, logs=None):
-                logs = self._remove_keys(logs)
+                logs = KerasCallback._xform_logs(logs)
                 self.callback(self.current_epoch, self.current_step, **logs)
 
             def on_epoch_end(self, epoch, logs=None):
-                logs = self._remove_keys(logs)
+                logs = KerasCallback._xform_logs(logs)
                 self.current_epoch += 1
                 self.callback(self.current_epoch, self.current_step, **logs)
 
             def on_batch_begin(self, batch, logs=None):
-                logs = self._remove_keys(logs)
+                logs = KerasCallback._xform_logs(logs)
                 self.callback(self.current_epoch, self.current_step, **logs)
 
             def on_batch_end(self, batch, logs=None):
-                logs = self._remove_keys(logs)
+                logs = KerasCallback._xform_logs(logs)
                 self.current_step += 1
                 self.callback(self.current_epoch, self.current_step, **logs)
 
-            def _remove_keys(self, logs):
+            @staticmethod
+            def _xform_logs(logs):
                 from copy import deepcopy
                 logs = deepcopy(logs or {})
                 for k in ('size', 'batch', 'epoch'):
                     if k in logs:
                         del logs[k]
-                return logs
+                return {k.replace('_', '-'):v for k, v in logs.items()}
 
         return KerasCallback(env, display_progress, stats)
 
