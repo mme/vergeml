@@ -114,7 +114,7 @@ class ImageNetModelPlugin(ModelPlugin):
                 cnn = args.get('cnn', 'resnet-50')
                 variant = args.get('variant', 'auto')
                 size = args.get('size', 'auto')
-                alpha = args.get('size', 1.0)
+                alpha = args.get('alpha', 1.0)
 
                 # Output has to be labeled-image-features.
                 if (k == 'input' and type_ in (None, 'labeled-image-features')) or k == 'output':
