@@ -413,8 +413,9 @@ class Environment:
         del config['results']
         del config['random-robot']
 
-        cmd, args = self.current_command
-        config[cmd.name] = args
+        if self.current_command:
+            cmd, args = self.current_command
+            config[cmd.name] = args
 
         with open(config_file, "w") as file:
             yaml.dump(config, file, default_flow_style=False)
