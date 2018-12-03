@@ -30,8 +30,6 @@ yaml.add_representer(Labels, lambda dump, dat: dump.represent_list(dat))
 # Do not use aliases.
 yaml.Dumper.ignore_aliases = lambda *_args: True
 
-# REVIEW add a method to push/pop the environment
-
 ENV = None
 
 _DEFAULT_STATS = [dict(name='acc', title='Accuracy', category="TRAINING", format='.4f',
@@ -169,17 +167,6 @@ class Environment:
 
         self._load_model_plugin(project_file, data_file, model is not None)
 
-        # REVIEW - need a good error message in self._load_yaml_and_configure
-        # try:
-        #     # merge device and data config
-        #     self._config.update(apply_config(config, validators))
-        # except VergeMLError as err:
-        #     # improve the error message when this runs on the command line
-        #     if is_global_instance and err.hint_key:
-        #         key = err.hint_key
-        #         err.message = f"Option --{key}: " + err.message
-        #     raise err
-
         # always set up numpy and python
         self.configure('python')
         self.configure('numpy')
@@ -226,7 +213,6 @@ class Environment:
             'model': doc.get('model')
         })
 
-        # Set results. REVIEW neccessary?
         self.results = _Results(self, data_file)
 
         return data_file
