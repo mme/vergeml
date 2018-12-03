@@ -1,20 +1,24 @@
-from vergeml.command import command, CommandPlugin, Command
-from vergeml.option import option
-from vergeml.utils import VergeMLError
-from vergeml.display import DISPLAY
+"""List command.
+"""
 from copy import deepcopy
-import sys
 from collections import OrderedDict
 import os
 import os.path
 import json
 import csv
 from datetime import datetime
-import yaml
 import io
+import sys
+
+import yaml
+
+from vergeml.command import command, CommandPlugin, Command
+from vergeml.option import option
+from vergeml.utils import VergeMLError
+from vergeml.display import DISPLAY
 
 EXAMPLES = """
-$ ml list -sacc 
+$ ml list -sacc
 # sort by acc value
 
 $ ml list status -eq RUNNING
@@ -26,40 +30,24 @@ $ ml list test_acc -gt 0.8
 # available comparison operations:
 # -gt, -lt, -eq, -neq, -gte and -lte
 """.strip()
-@command('list', descr="List trained models.", free_form=True, examples=EXAMPLES)
+
+@command('list', descr="List trained models.", free_form=True, examples=EXAMPLES) # pylint: disable=R0903
 @option('sort', descr="By which column to sort.", default='created_at', short='s')
 @option('order', descr="Sort order.", default='asc', short='o', validate=('asc', 'desc'))
 @option('columns', descr="Which columns to show.", type='Optional[str]', short='c')
 @option('output', descr="Output format.", default='table', validate=('table', 'csv', 'json'))
 class ListCommand(CommandPlugin):
+    """List trained models"""
 
-     def __call__(self, args, env):
-        args = args[1]
+    def __call__(self, args, env):
 
-        comps = []
-        for ix, arg in enumerate(args):
-            if arg in ('-gt', '-lt', '-eq', '-neq', '-gte', '-lte'):
-                start, end = ix - 1, ix + 1
-                if start < 0 or end >= len(args):
-                    raise VergeMLError("Invalid options.", help_topic='list')
-                comps.append((start, end))
-
-        comp_args = []
-        for start, end in reversed(comps):
-            comp_args.append(args[start:end+1])
-            del args[start:end+1]
-
-        cmd = deepcopy(Command.discover(ListCommand))
-        cmd.free_form = False
-        args.insert(0, 'list')
-        args = cmd.parse(args)
-        args.setdefault('sort', 'created_at')
-        args.setdefault('order', 'asc')
-        args.setdefault('columns', None)
-        args.setdefault('output', 'table')
+        # parse and partition into normal and comparison args
+        args, cargs = _parse_args(args)
 
         train_dir = env.get("trainings-dir")
+
         if not os.path.exists(train_dir):
+            print("No trainings found", file=sys.stderr)
             return
 
         info = {}
@@ -103,7 +91,7 @@ class ListCommand(CommandPlugin):
             rdata = [""] * len(theader)
             rdata[0] = "@" + AI
 
-            if not _filter(results, hyper[AI], comp_args):
+            if not _filter(results, hyper[AI], cargs):
                 continue
 
             for k, v in sorted(results.items()):
@@ -137,7 +125,7 @@ class ListCommand(CommandPlugin):
                     rdata[pos] = v
 
             tdata.append(rdata)
-        
+
         if args['output'] == 'table':
             if not tdata:
                 return
@@ -160,6 +148,33 @@ class ListCommand(CommandPlugin):
             val = val.replace('\r', '')
             print(val.strip())
 
+def _parse_args(args):
+    args = args[1]
+
+    comps = []
+    for idx, arg in enumerate(args):
+        if arg in ('-gt', '-lt', '-eq', '-neq', '-gte', '-lte'):
+            start, end = idx - 1, idx + 1
+            if start < 0 or end >= len(args):
+                raise VergeMLError("Invalid options.", help_topic='list')
+            comps.append((start, end))
+
+    cargs = []
+    for start, end in reversed(comps):
+        cargs.append(args[start:end+1])
+        del args[start:end+1]
+
+    cmd = deepcopy(Command.discover(ListCommand))
+    cmd.free_form = False
+    args.insert(0, 'list')
+    args = cmd.parse(args)
+    args.setdefault('sort', 'created_at')
+    args.setdefault('order', 'asc')
+    args.setdefault('columns', None)
+    args.setdefault('output', 'table')
+
+    return args, cargs
+
 def _filter(info, hyper, comp_args):
     try:
         cols = {}
@@ -167,12 +182,12 @@ def _filter(info, hyper, comp_args):
         cols.update(info)
         res = True
         for col, op, val in comp_args:
-            
+
             if not col in cols:
                 return False
 
             cval = cols[col]
-            
+
             if isinstance(cval, int):
                 val = int(val)
             elif isinstance(cval, float):
@@ -190,9 +205,9 @@ def _filter(info, hyper, comp_args):
                 res = res and (cval >= val)
             elif op == '-lte':
                 res = res and (cval <= val)
-            
+
             if not res:
                 return False
         return res
-    except Exception:
+    except: # pylint: disable=W0703
         return False
