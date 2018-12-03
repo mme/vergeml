@@ -14,6 +14,7 @@ from vergeml.loader import FileCachedLoader, LiveLoader, MemoryCachedLoader
 from vergeml.plugins import PLUGINS
 from vergeml.utils import introspect
 from vergeml.display import DISPLAY
+from vergeml.utils import SPLITS
 
 
 class Labels(list):
@@ -437,6 +438,7 @@ class Data:
                     # close the progress bar on the last step
                     self._progress_bar.stop()
                     print("")
+
 
 
 def _load_list(loader,  # pylint: disable=R0914,R0913

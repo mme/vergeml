@@ -1,7 +1,8 @@
+# pylint: disable=C0111
 from setuptools import setup, find_packages
 
 with open("README.md", "r") as fh:
-    long_description = fh.read()
+    LONG_DESCRIPTION = fh.read()
 
 
 setup(
@@ -14,7 +15,7 @@ setup(
     keywords="ai deep learning",
     url="http://github.com/vergeml/vergeml",
     packages=find_packages(),
-    long_description=long_description,
+    long_description=LONG_DESCRIPTION,
     long_description_content_type="text/markdown",
     classifiers=[
         "Development Status :: 3 - Alpha",
@@ -52,7 +53,8 @@ setup(
     download=vergeml.commands.download:DownloadCommand
     run=vergeml.commands.run:RunCommand
     plot=vergeml.commands.plot:PlotCommand
-    
+    preprocess=vergeml.commands.preprocess:PreprocessCommand
+
     [vergeml.download]
     cats-and-dogs=vergeml.datasets.cats_and_dogs:CatsAndDogsDataset
     ham10000=vergeml.datasets.ham10000:Ham10KDataset
@@ -87,7 +89,7 @@ setup(
 
     [vergeml.model]
     imagenet=vergeml.models.imagenet:ImageNetModelPlugin
-    
+
     [console_scripts]
     ml = vergeml.__main__:main
     """

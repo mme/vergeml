@@ -1,7 +1,7 @@
 from vergeml.img import INPUT_PATTERNS, open_image, fixext, ImageType
 from vergeml.io import source, SourcePlugin, Sample
 from vergeml.data import Labels
-from vergeml.utils import VergeMLError
+from vergeml.utils import VergeMLError, xlink
 from vergeml.option import option
 import random
 import numpy as np
@@ -175,7 +175,9 @@ class LabeledImageSource(SourcePlugin):
 
     def begin_preview(self, output_dir):
         # generate data dir
-        os.makedirs(os.path.join(output_dir, ".data"))
+        data_dir = os.path.join(output_dir, ".data")
+        if not os.path.exists(data_dir):
+            os.makedirs(data_dir)
 
     def supports_preview(self):
         return True
@@ -202,4 +204,4 @@ class LabeledImageSource(SourcePlugin):
             if not os.path.exists(link_dir):
                 os.makedirs(link_dir)
             link_path = self.preview_filename(os.path.join(link_dir, name))
-            os.symlink(os.path.abspath(path), link_path)
+            xlink(os.path.abspath(path), link_path)

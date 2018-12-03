@@ -4,6 +4,7 @@ import inspect
 import textwrap
 from collections import namedtuple
 import re
+import os
 
 SPLITS = ('train', 'val', 'test')
 
@@ -227,3 +228,15 @@ def format_info_text(text, indent=0, width=70):
         indstr = str(' ' * indent)
         res = list(map(lambda l: indstr + l, res))
     return "\n".join(res)
+
+if os.name == 'nt':
+    def xlink(src, dst):
+        """Cross platform file links.
+        """
+        os.link(src, dst)
+else:
+    def xlink(src, dst):
+        """Cross platform file links.
+        """
+        # use symlink on Unix
+        os.symlink(src, dst)

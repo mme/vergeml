@@ -80,14 +80,13 @@ class Loader:
     """Abstract base class for data loaders.
     """
 
-    def __init__(self, cache_dir, input, ops=None, output=None): # pylint: disable=W0622
+    def __init__(self, cache_dir, input, ops=None, output=None, transform=True): # pylint: disable=W0622
         self.cache_dir = cache_dir
         self.input = input
         self.ops = ops or []
         self.output = output
         self.cache = {}
         self.pumps = {}
-
 
         self._progress_callback = lambda n, t: None
 
@@ -337,6 +336,7 @@ class LiveLoader(Loader):
 
     multipliers = None
     rngs = None
+    transform = True
 
     def begin_read_samples(self):
         if self.cache:
@@ -385,7 +385,7 @@ class LiveLoader(Loader):
         else:
             res = samples
 
-        if self.output:
+        if self.output and self.transform:
             res = [self.output.transform(sample) for sample in res]
 
         for sample, i in zip(res, range(start_index, end_index)):

@@ -508,32 +508,36 @@ class Command: # pylint: disable=R0902
         return args, extra
 
     def _parse_arguments(self, extra, res):
-        arg_option = next((filter(lambda o: o.is_argument_option(), self.options)), None)
+        opt = next((filter(lambda o: o.is_argument_option(), self.options)), None)
 
-        if arg_option:
-            if not arg_option.is_required():
-                extra_conf = 'optional'
-            elif arg_option.has_type(list):
-                extra_conf = 'list'
+        if opt:
+
+            # Not a list but multiple values.
+            if not opt.has_type(list) and len(extra) > 1:
+                raise _invalid_arguments(f"Invalid arguments.", help_topic=self.name)
+
+            # Required but no option provided.
+            if opt.is_required() and not extra:
+                raise _invalid_arguments(f"Missing argument {opt.name}.",
+                                         help_topic=self.name)
+
+            # When there is a default value, don't set the value to None.
+            if opt.default is not None:
+                val = next(iter(extra), None)
+                if val is not None:
+                    res[opt.name] = val
+
+            # List value.
+            elif not opt.has_type(list):
+                res[opt.name] = next(iter(extra), None)
+
+            # Other ...
             else:
-                extra_conf = 'required'
-        else:
-            extra_conf = 'none'
+                res[opt.name] = extra
 
-        if (extra_conf == 'optional' and len(extra) > 1) or \
-            (extra_conf == 'none' and extra):
+        elif extra:
             raise _invalid_arguments(help_topic=self.name)
 
-        elif extra_conf == 'required' and not extra:
-            raise _invalid_arguments(f"Missing argument {arg_option.name}.", help_topic=self.name)
-
-        elif extra_conf == 'required' and len(extra) > 1:
-            raise _invalid_arguments(f"Invalid arguments.", help_topic=self.name)
-
-        if extra_conf in ('optional', 'required'):
-            res[arg_option.name] = next(iter(extra), None)
-        elif extra_conf == 'list':
-            res[arg_option.name] = extra
 
     def _parse_validate(self, args, res):
 
