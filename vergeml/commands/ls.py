@@ -32,7 +32,7 @@ $ ml list test_acc -gt 0.8
 """.strip()
 
 @command('list', descr="List trained models.", free_form=True, examples=EXAMPLES) # pylint: disable=R0903
-@option('sort', descr="By which column to sort.", default='created_at', short='s')
+@option('sort', descr="By which column to sort.", default='created-at', short='s')
 @option('order', descr="Sort order.", default='asc', short='o', validate=('asc', 'desc'))
 @option('columns', descr="Which columns to show.", type='Optional[str]', short='c')
 @option('output', descr="Output format.", default='table', validate=('table', 'csv', 'json'))
@@ -75,7 +75,7 @@ def _parse_args(args):
     cmd.free_form = False
     args.insert(0, 'list')
     args = cmd.parse(args)
-    args.setdefault('sort', 'created_at')
+    args.setdefault('sort', 'created-at')
     args.setdefault('order', 'asc')
     args.setdefault('columns', None)
     args.setdefault('output', 'table')
@@ -113,8 +113,8 @@ def _find_trained_models(args, env):
     return info, hyper
 
 def _format_table(args, cargs, info, hyper): # pylint: disable=R0912
-    theader = ['AI', 'model', 'status', 'num_samples', 'training_start', 'epochs']
-    exclude = ['training_end', 'steps', 'created_at']
+    theader = ['AI', 'model', 'status', 'num-samples', 'training-start', 'epochs']
+    exclude = ['training-end', 'steps', 'created-at']
 
     if args['columns']:
         theader = ['AI'] + [s.strip() for s in args['columns'].split(",")]
@@ -141,7 +141,7 @@ def _format_table(args, cargs, info, hyper): # pylint: disable=R0912
             if k in theader:
                 pos = theader.index(k)
 
-                if k in ('training_start', 'training_end', 'created_at'):
+                if k in ('training-start', 'training-end', 'created-at'):
                     val = datetime.utcfromtimestamp(val)
                     val = val.strftime("%Y-%m-%d %H:%M")
                 elif isinstance(val, float):
