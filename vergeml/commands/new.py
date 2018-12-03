@@ -10,7 +10,7 @@ class NewCommand(CommandPlugin):
 
     def __call__(self, args, env):
         dest = args['<project-name>']
-        if not env.model:
+        if not env.model_plugin:
             template = "# model:\n#   name: <name of your model>\n"
         else:
             template = env.model_plugin.project_file_template()
