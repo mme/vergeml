@@ -6,6 +6,27 @@ import os.path
 import random
 import csv
 
+_TEMPLATE = """\
+model: imagenet
+
+# Uncomment for better ml list output:
+
+# list:
+#   columns:
+#   - model
+#   - status
+#   - num-samples
+#   - epochs
+#   - auc
+#   - test-acc
+
+# To get precision/recall/f1 for your positive class, add this:
+
+#   - <label>-precision
+#   - <label>-recall
+#   - <label>-f1
+"""
+
 @model('imagenet', descr='Image classifier model, with weights pre-trained on ImageNet.')
 class ImageNetModelPlugin(ModelPlugin):
 
@@ -125,6 +146,9 @@ class ImageNetModelPlugin(ModelPlugin):
                     env.set(f"data.{k}.variant", variant)
                     env.set(f"data.{k}.size", size)
                     env.set(f"data.{k}.alpha", alpha)
+
+    def project_file_template(self):
+        return _TEMPLATE
 
 
 class ImageNetModel:
