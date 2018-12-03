@@ -26,16 +26,24 @@ class _CommandCallProxy:
 
     @staticmethod
     def _wrap_call(cmd, fun, args, env):
+        import ipdb; ipdb.set_trace()  # breakpoint efe4d056 //
         fn_args = deepcopy(args)
 
-        # Let the environment know about the name of the command being
-        # executed
-        env.current_command = cmd.name
+        config_name = cmd.name
+
+        if env.current_command:
+
+            # find the previous command and check for sub option
+            sub_option = next(filter(lambda c: c.subcommand, env.current_command[0].options), None)
+
+            if sub_option and args.get(sub_option.name) == cmd.name:
+            # we are a sub command
+                config_name = env.current_command[0].name + '.' + cmd.name
 
         # Free form commands deal with this manually
         if not cmd.free_form:
             # If existent, read settings from the config file
-            config = parse_command(cmd, env.get(cmd.name))
+            config = parse_command(cmd, env.get(config_name))
 
             # Set missing args from the config file
             for k, arg in config.items():
@@ -53,8 +61,9 @@ class _CommandCallProxy:
                     # TODO show --name only when called via the command line
                     raise VergeMLError(f'Missing argument --{opt.name}.', help_topic=cmd.name)
 
-
-            env.set(cmd.name, fn_args)
+        # Let the environment know about the name of the command being
+        # executed
+        env.current_command = (cmd, fn_args)
 
         # Set up defaults for the command. This will also give models a chance
         # to alter the configuration of the environment before command
@@ -417,9 +426,6 @@ class Command: # pylint: disable=R0902
             try:
                 res = cmd.parse(argv)
                 res[sub_option.name] = sub_name
-                for opt in cmd.options:
-                    if opt.name not in res:
-                        res[opt.name] = opt.default
                 return res
             except VergeMLError as err:
                 err.help_topic = f"{cmd_name}:{sub_name}"
