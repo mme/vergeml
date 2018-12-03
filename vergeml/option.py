@@ -320,14 +320,14 @@ class Option:
         else:
             return value
 
-    # REVIEW remove this
-    def is_optional(self):
-        type_optional = hasattr(self.type, '__origin__') and \
-                        self.type.__origin__ == Union and \
-                        type(None) in self.type.__args__
-        type_optional_str = isinstance(self.type, str) and self.type.startswith('Optional')
+    def has_optional_type(self):
+        """Check if the type of the option permits None values.
+        """
+        return getattr(self.type, '__origin__', None) == Union and \
+               type(None) in self.type.__args__ # pylint: disable=C0123
 
-        return self.default is not None or type_optional or type_optional_str
+    def is_optional(self):
+        return self.default is not None or self.has_optional_type()
 
     def is_required(self):
         return not self.is_optional()

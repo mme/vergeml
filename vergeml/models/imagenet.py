@@ -105,17 +105,26 @@ class ImageNetModelPlugin(ModelPlugin):
         self.model.load(os.path.join(env.checkpoints_dir()), cnn, input_size)
 
     def set_defaults(self, cmd, args, env):
-        if cmd == 'train':
+        if cmd in ('train', 'preprocess'):
             for k in ('input', 'output'):
-                # the user can specify a different input, but the output has to be labeled-image-features
+
                 type_ = env.get(f"data.{k}.type")
+
+                output_layer = args.get('output-layer', 'last')
+                cnn = args.get('cnn', 'resnet-50')
+                variant = args.get('variant', 'auto')
+                size = args.get('size', 'auto')
+                alpha = args.get('size', 1.0)
+
+                # Output has to be labeled-image-features.
                 if (k == 'input' and type_ in (None, 'labeled-image-features')) or k == 'output':
+
                     env.set(f"data.{k}.type", 'labeled-image-features')
-                    env.set(f"data.{k}.output-layer", args['output-layer'])
-                    env.set(f"data.{k}.cnn", args['cnn'])
-                    env.set(f"data.{k}.variant", args['variant'])
-                    env.set(f"data.{k}.size", args['size'])
-                    env.set(f"data.{k}.alpha", args['alpha'])
+                    env.set(f"data.{k}.output-layer", output_layer)
+                    env.set(f"data.{k}.cnn", cnn)
+                    env.set(f"data.{k}.variant", variant)
+                    env.set(f"data.{k}.size", size)
+                    env.set(f"data.{k}.alpha", alpha)
 
 
 class ImageNetModel:
