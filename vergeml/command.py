@@ -115,7 +115,7 @@ def command(name=None, # pylint: disable=R0913
             long_descr=None,
             examples=None,
             free_form=False,
-            type='command'):
+            type='command'): # pylint: disable=W0622
 
     """Define a model command.
 
@@ -173,10 +173,9 @@ class Command: # pylint: disable=R0902
     """A command can be called directly from the command line.
        It is either a vergeml.cmd plugin or a model command."""
 
-    # REVIEW refactor kind to 'type'
     def __init__(self, # pylint: disable=R0913
                  name, descr=None, long_descr=None, examples=None, free_form=False,
-                 type='command', options=None, plugins=PLUGINS):
+                 type='command', options=None, plugins=PLUGINS): # pylint: disable=W0622
         """Construct a command.
 
         See the documentation of the decorator function ´command`.
