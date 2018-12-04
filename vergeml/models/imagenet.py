@@ -77,8 +77,7 @@ class ImageNetModelPlugin(ModelPlugin):
         hyperparameters = args.copy()
         hyperparameters.update({'labels': env.data.meta['labels'], 'size': size})
 
-        env.start_training(name=args['name'],
-                           hyperparameters=hyperparameters)
+        env.start_training(name=args['name'], hyperparameters=hyperparameters)
 
         trainargs.update(env.args_for(self.model.train, args))
         trainargs['callbacks'] = [env.keras_callback()]
