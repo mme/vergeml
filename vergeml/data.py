@@ -61,7 +61,7 @@ class Data:
                  input: SourcePlugin = None, # pylint: disable=W0622
                  output: SourcePlugin = None,
                  ops: List[BaseOperation] = None,
-                 random_seed: int = 2204,
+                 random_seed: int = 42,
                  cache_dir: str = '.cache',
                  cache_input: Union[str, bool] = 'mem',
                  cache_output: Union[str, bool] = False,

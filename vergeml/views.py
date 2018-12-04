@@ -100,7 +100,7 @@ class BatchView: # pylint: disable=R0902
                  infinite: bool = False,
                  with_meta: bool = False,
                  randomize: bool = False,
-                 random_seed: int = 2204,
+                 random_seed: int = 42,
                  transform_x: Callable[[Any], Any] = lambda x: x,
                  transform_y: Callable[[Any], Any] = lambda y: y):
 
@@ -182,7 +182,7 @@ class IteratorView: # pylint: disable=R0902
                  infinite=False,
                  with_meta=False,
                  randomize=False,
-                 random_seed=2204,
+                 random_seed=42,
                  transform_x=lambda x: x,
                  transform_y=lambda y: y):
 

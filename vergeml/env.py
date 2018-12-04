@@ -84,7 +84,7 @@ class Environment:
         :param test_split:      The test split. [default: 10%]
         :param val_split:       The val split. [default: 10%]
         :param cache_dir:       The directory used for caching [default: .cache]
-        :param random_seed:     Random seed. [default 2204]
+        :param random_seed:     Random seed. [default 42]
         :param trainings_dir:   The directory to save training results to. [default: trainings]
         :param project_dir:     The directory of the project. [default: current directory]
         :param trained_model:   Optional name of a trained model.
@@ -149,7 +149,7 @@ class Environment:
             'test-split': '10%',
             'val-split': '10%',
             'cache-dir': os.path.join(project_dir, ".cache"),
-            'random-seed': 2204,
+            'random-seed': 42,
             'trainings-dir': os.path.join(project_dir, "trainings"),
         }
 

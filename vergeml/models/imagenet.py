@@ -196,7 +196,7 @@ class ImageNetModel:
               dropout=0.,
               early_stopping_delta=0.,
               early_stopping_patience=0,
-              random_seed=2204,
+              random_seed=42,
               callbacks=[],
               trainings_dir="trainings",
               checkpoints_dir="checkpoints",
