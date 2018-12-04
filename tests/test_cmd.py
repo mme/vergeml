@@ -45,7 +45,7 @@ def test_env_from_args():
     assert default_env.get('test-split') == '10%'
     assert default_env.get('val-split') == '10%'
     assert default_env.get('cache-dir') == '.cache'
-    assert default_env.get('random-seed') == 2204
+    assert default_env.get('random-seed') == 42
     assert default_env.get('trainings-dir') == 'trainings'
 
 def test_env_from_project_file(tmpdir):

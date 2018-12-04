@@ -34,7 +34,7 @@ HELP_OPTIONS = [
     ('--cache-dir',      'The cache directory [default: .cache].'),
     ('--trainings-dir',  'The name of the directory the training data is written to [default: trainings]'),
     ('--project-dir',    'The path of the project directory [default: the current directory].'),
-    ('--random-seed',    'Seed of the random generator [default: 2204].'),
+    ('--random-seed',    'Seed of the random generator [default: 42].'),
     ('--cache',          'How to cache samples during training [default: mem]'),
     ('--device',         'Which device to use for training [default: auto].'),
     ('--device-memory',  'How much device memory to use on a GPU. [default: auto]'),

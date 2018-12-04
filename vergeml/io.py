@@ -41,7 +41,7 @@ class SourcePlugin:
     | ------------------ | ------------- | ------------------ | -------------- |
     | samples_dir        | samples       | samples-dir        | --samples-dir  |
     | cache_dir          | .cache        | cache-dir          | --cache-dir    |
-    | random_seed        | 2204          | random-seed        | --random-seed  |
+    | random_seed        | 42            | random-seed        | --random-seed  |
     | trainings_dir      | ./trainings   | N/A                | N/A            |
     | val_dir            | None          | val-split  [2]     | --val          |
     | val_num            | None          | val-split  [2]     | --val          |
@@ -77,7 +77,7 @@ class SourcePlugin:
             self.input_patterns = self.input_patterns.split(",")
         self.samples_dir = args.get('samples-dir', 'samples')
         self.cache_dir = args.get('cache-dir', '.cache')
-        self.random_seed = args.get('random-seed', 2204)
+        self.random_seed = args.get('random-seed', 42)
         self.trainings_dir = args.get('trainings-dir', './trainings')
 
         self._cached_file_state = None
