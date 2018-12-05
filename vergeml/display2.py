@@ -29,6 +29,9 @@ def _text_ljust(text, prev_len):
 
     return text
 
+# TODO don't spin when output is not interactive.
+# TODO progress.
+
 class _SpinnerThread(threading.Thread):
 
     def __init__(self):
@@ -244,6 +247,24 @@ class Spinner:
         elif exc_type:
             reason = 'fail'
         self.stop(reason)
+
+
+class ProgressSpinner(Spinner):
+
+    current = 0
+
+    def update(self, count, total=None):
+        """Update the progress of the spinner.
+        """
+        self.current += count
+
+        msg = self.message
+
+        if total:
+            perc = int(self.current/total*100)
+            msg = '[{:>3}%] {}'.format(perc, self.message)
+
+        self.display(msg + "...")
 
 
 
@@ -612,6 +633,14 @@ Terminal.show_cursor()
 
 if __name__ == '__main__':
 
+    with ProgressSpinner("Downloading MNIST") as spin:
+        time.sleep(1)
+        spin.update(0, 100)
+
+        for idx in range(99):
+            time.sleep(0.2)
+            spin.update(1, 100)
+
     with Spinner("Training") as spin:
         spin.display("A very long line is needed here !")
         time.sleep(2)
@@ -622,7 +651,7 @@ if __name__ == '__main__':
         print("This is another message i am writing to stderr", file=sys.stderr)
         print("This is never getting old.")
         time.sleep(2)
-        with Spinner("SubTraining"):
+        with Spinner("Below Training"):
             time.sleep(2)
             print("This is also working!")
             time.sleep(1)
