@@ -60,7 +60,7 @@ After the download has finished, you will see a lot of images in your ```samples
 
 Later, when you use your own data, simply copy your images into subdirectories of the samples directory. VergeML will automatically pick up the directory names as labels. 
 
-To start training, type:
+To start training, just type:
 
     ml train
 
