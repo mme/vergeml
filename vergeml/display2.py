@@ -248,8 +248,19 @@ class Spinner:
             reason = 'fail'
         self.stop(reason)
 
+def _progress(current, total):
+    if total:
+        return '[{:>3}%] '.format(int(current/total*100))
+    return ''
+
+def _count_of_total(count, total):
+    res = str(total)
+    return str(count).ljust(len(res), ' ') + '/' + res
+
 
 class ProgressSpinner(Spinner):
+    """A spinner for showing progress.
+    """
 
     current = 0
 
@@ -257,15 +268,26 @@ class ProgressSpinner(Spinner):
         """Update the progress of the spinner.
         """
         self.current += count
+        self.display(_progress(self.current, total) + self.message + "...")
 
-        msg = self.message
 
-        if total:
-            perc = int(self.current/total*100)
-            msg = '[{:>3}%] {}'.format(perc, self.message)
+class TrainingSpinner(Spinner):
+    """A spinner for showing training progress.
+    """
 
-        self.display(msg + "...")
+    def update_epoch_step(self, epoch, total_epochs, step, steps_per_epoch, msg=None):
+        """Update epoch and steps.
+        """
+        current_step = epoch * steps_per_epoch + step
+        total_steps = total_epochs * steps_per_epoch
 
+        text = _progress(current_step, total_steps)
+        epoch_count = _count_of_total(epoch+1, total_epochs)
+        step_count = _count_of_total(step+1, steps_per_epoch)
+
+        text += '[Epoch: {}] [Step: {}] {}'.format(epoch_count, step_count,(msg or self.message))
+
+        self.display(text)
 
 
 _DEFAULT_HEIGHT = 24
@@ -633,22 +655,44 @@ Terminal.show_cursor()
 
 if __name__ == '__main__':
 
+
     with ProgressSpinner("Downloading MNIST") as spin:
         time.sleep(1)
         spin.update(0, 100)
 
         for idx in range(99):
-            time.sleep(0.2)
+            time.sleep(0.05)
             spin.update(1, 100)
+
+
+    with Spinner("Preparing samples"):
+        time.sleep(5)
+        print("Using cache.")
+        time.sleep(5)
+
+    with TrainingSpinner("Training") as spin:
+        total_epochs = 10
+        steps_per_epoch = 100
+        time.sleep(1)
+        print("Loading Model...")
+        time.sleep(1)
+        for epoch in range(total_epochs):
+            for step in range(steps_per_epoch):
+                import random
+                spin.update_epoch_step(epoch, total_epochs, step, steps_per_epoch, "Acc: " + random.choice(["0.9743", "0.9625", "0.9744", "0.9801"]) + ", Loss: " + random.choice(["0.1239", "0.2456", "0.2678", "0.1996"]) + ", Val Acc: 0.1234, Val Loss: 0.9001 | ☕  " + str(total_epochs - epoch) + "min")
+                time.sleep(0.05)
+            print("Saving Checkpoint...")
+            time.sleep(2)
+
 
     with Spinner("Training") as spin:
         spin.display("A very long line is needed here !")
         time.sleep(2)
-        print("This is a message i am writing to stderr", file=sys.stderr)
+        # print("This is a message i am writing to stderr", file=sys.stderr)
         time.sleep(2)
         print("Whatever.")
         time.sleep(2)
-        print("This is another message i am writing to stderr", file=sys.stderr)
+        # print("This is another message i am writing to stderr", file=sys.stderr)
         print("This is never getting old.")
         time.sleep(2)
         with Spinner("Below Training"):
@@ -656,8 +700,6 @@ if __name__ == '__main__':
             print("This is also working!")
             time.sleep(1)
 
-    with Spinner("Preparing samples"):
-        time.sleep(5)
 
     with Spinner("Loading TensorFlow"):
         time.sleep(2)
