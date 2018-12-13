@@ -3,7 +3,7 @@
 
 VergeML is a **command line based environment** for exploring, training and running state-of-the-art Machine Learning models. It provides ***ready-to-use models***, handles ***data preprocessing and augmentation***, tracks your AI's ***training sessions*** and provides other goodies such as an ***automatic REST interface***.
 
-Here's how it looks in action:
+Here is how it looks in action:
 
 <img src="https://github.com/vergeml/vergeml/raw/master/docs/img/term.png" alt="terminal" width="691px"/>
 
