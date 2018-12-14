@@ -4,6 +4,7 @@ from vergeml.command import command
 from vergeml.utils import VergeMLError
 from vergeml.display import DISPLAY
 import urllib
+import urllib.request
 import os
 import tempfile
 import uuid
