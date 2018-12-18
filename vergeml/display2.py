@@ -159,13 +159,27 @@ class _GlobalOutput:
     def display(stream, msg):
         """Display msg in stream
         """
-        assert _GlobalOutput._spinner_thread
-        _GlobalOutput._spinner_thread.display(stream, msg)
+        if Terminal.is_tty():
+            assert _GlobalOutput._spinner_thread
+            _GlobalOutput._spinner_thread.display(stream, msg)
+        else:
+            file = sys.stdout
+            if stream == 'stderr':
+                file = sys.stderr
+
+            msg = msg.strip().encode(file.encoding, errors='replace').decode(file.encoding)
+
+            print(msg, file=file)
+
+
 
     @staticmethod
     def register_spinner(spinner):
         """Register a new spinner with global output.
         """
+
+        if not Terminal.is_tty():
+            return
 
         if not _GlobalOutput._spinner_thread:
 
@@ -181,6 +195,9 @@ class _GlobalOutput:
     def deregister_spinner(spinner, msg):
         """Deregister a spinner.
         """
+        if not Terminal.is_tty():
+            return
+
         assert _GlobalOutput._spinners.pop() == spinner
 
         if not _GlobalOutput._spinners:
@@ -271,6 +288,9 @@ def _format_count_of(count, total):
 def _format_eta(start_time, elapsed_steps, total_steps):
     prefix = ' ~ ☕  '
 
+    if not Terminal.is_tty():
+        prefix = ' ~ '
+
     if not start_time:
         return ''
 
@@ -341,16 +361,8 @@ class TrainingSpinner(Spinner):
 
         width, _ = Terminal.terminal_size()
 
-        def _check_line(line, eta_part=''):
-
-            # subtract 2 characters for the space used up by the spinner
-            add_space = 2
-
-            if eta_part:
-                # subtract 1 additional char for the separator to eta
-                add_space += 1
-
-            return len(line) + len(eta_part) + 1 + 2 <= width
+        if not Terminal.is_tty():
+            width = sys.maxsize
 
         formats = (
             ('{progress} [Epoch: {epochs}] [Step: {steps}] {msg}', '{eta}'),
@@ -397,7 +409,8 @@ class TrainingSpinner(Spinner):
 
         text, self.prev_line = TrainingSpinner._format(parts)
 
-        self.display(text, 'stdout')
+        if Terminal.is_tty():
+            self.display(text, 'stdout')
 
     def stop(self, reason='done'):
         if reason == 'done':
