@@ -11,6 +11,7 @@ import re
 from copy import deepcopy
 from itertools import cycle
 from functools import lru_cache
+import datetime
 
 _ANSI_GREEN = 32
 _ANSI_RED = 31
@@ -29,8 +30,8 @@ def _text_ljust(text, prev_len):
 
     return text
 
-# TODO don't spin when output is not interactive.
-# TODO progress.
+# TODO don't spin when output is not interactive (i.e. not a tty).
+# TODO don't spin faster
 
 class _SpinnerThread(threading.Thread):
 
@@ -57,6 +58,11 @@ class _SpinnerThread(threading.Thread):
             _REAL_STDOUT.flush()
             return text
 
+        def _write_stdout_nl(text, prev_len):
+            text = "\r" + "  " + text
+            _REAL_STDOUT.write(_text_ljust(text, prev_len) + "\n")
+            _REAL_STDOUT.flush()
+
         def _write_stderr(text):
             lines = text.split("\n")
             for idx, line in enumerate(lines):
@@ -82,9 +88,9 @@ class _SpinnerThread(threading.Thread):
             try:
                 action, payload = self._rq.get(timeout=timeout)
 
-                assert action in ('stop', 'stdout', 'stderr')
+                assert action in ('stop', 'stdout', 'stdout_nl', 'stderr')
 
-                if action == 'stdout':
+                if action in ('stdout', 'stdout_nl'):
                     # after the first message, wait .05 seconds until updating
                     # the screen
                     timeout = .05
@@ -93,8 +99,12 @@ class _SpinnerThread(threading.Thread):
 
                     if payload:
                         msg = payload
-                        out = _write_stdout(msg, prev_len)
-                        prev_len = _text_len(out)
+                        if action == 'stdout':
+                            out = _write_stdout(msg, prev_len)
+                            prev_len = _text_len(out)
+                        elif action == 'stdout_nl':
+                            _write_stdout_nl(msg, prev_len)
+                            prev_len = 0
 
                 elif action == 'stderr':
                     payload = payload.strip()
@@ -121,7 +131,7 @@ class _SpinnerThread(threading.Thread):
     def display(self, stream, msg):
         """Display a message in the spinner thread.
         """
-        assert stream in ('stdout', 'stderr')
+        assert stream in ('stdout', 'stderr', 'stdout_nl')
 
         self._rq.put((stream, msg))
 
@@ -217,7 +227,7 @@ class Spinner:
 
         msg = self.message + "."
         if reason == 'done':
-            msg = self._wrap_color('✔', _ANSI_GREEN) + ' DONE ' + msg
+            msg = self._wrap_color('✓', _ANSI_GREEN) + ' DONE ' + msg
         elif reason == 'cancel':
             msg = '! CANCELED ' + msg
         elif reason == 'fail':
@@ -225,10 +235,10 @@ class Spinner:
 
         _GlobalOutput.deregister_spinner(self, msg)
 
-    def display(self, msg): # pylint: disable=R0201
+    def display(self, msg, stream='stdout'): # pylint: disable=R0201
         """Display a message.
         """
-        _GlobalOutput.display('stdout', msg)
+        _GlobalOutput.display(stream, msg)
 
     def _wrap_color(self, text, color):
         if self.with_color:
@@ -248,14 +258,41 @@ class Spinner:
             reason = 'fail'
         self.stop(reason)
 
-def _progress(current, total):
+def _format_progress(current, total):
     if total:
         return '[{:>3}%] '.format(int(current/total*100))
     return ''
 
-def _count_of_total(count, total):
+def _format_count_of(count, total):
     res = str(total)
     return str(count).ljust(len(res), ' ') + '/' + res
+
+
+def _format_eta(start_time, elapsed_steps, total_steps):
+    prefix = ' ~ ☕  '
+
+    if not start_time:
+        return ''
+
+    if elapsed_steps == 0:
+        return ''
+
+    elapsed_seconds = (datetime.datetime.now() - start_time).total_seconds()
+    seconds_per_step = elapsed_seconds / elapsed_steps
+    remaining_steps = total_steps - elapsed_steps
+    remaining_seconds = seconds_per_step * remaining_steps
+
+    delta = datetime.datetime(1, 1, 1) + datetime.timedelta(seconds=remaining_seconds)
+
+    if delta.day-1 > 0:
+        return prefix + "{}d{}h".format(delta.day-1, delta.hour)
+    if delta.hour > 0:
+        return prefix + "{}h{}m".format(delta.hour, delta.minute)
+    if delta.minute > 0:
+        return prefix + "{}m{}s".format(delta.minute, delta.second)
+
+    return prefix + "{}s".format(delta.second)
+
 
 
 class ProgressSpinner(Spinner):
@@ -268,26 +305,107 @@ class ProgressSpinner(Spinner):
         """Update the progress of the spinner.
         """
         self.current += count
-        self.display(_progress(self.current, total) + self.message + "...")
+        self.display(_format_progress(self.current, total) + self.message + "...")
+
 
 
 class TrainingSpinner(Spinner):
     """A spinner for showing training progress.
     """
+    start_time = None
+    current_epoch = None
+    prev_line = None
 
-    def update_epoch_step(self, epoch, total_epochs, step, steps_per_epoch, msg=None):
-        """Update epoch and steps.
-        """
+
+    def _track_prev_epoch(self, epoch):
+        if self.current_epoch is not None and epoch != self.current_epoch:
+            self.display(self.prev_line, 'stdout_nl')
+
+        self.current_epoch = epoch
+
+    @staticmethod
+    def _get_parts(epoch, total_epochs, step, steps_per_epoch, msg, start_time): # pylint: disable=R0913
         current_step = epoch * steps_per_epoch + step
         total_steps = total_epochs * steps_per_epoch
 
-        text = _progress(current_step, total_steps)
-        epoch_count = _count_of_total(epoch+1, total_epochs)
-        step_count = _count_of_total(step+1, steps_per_epoch)
+        parts = {}
+        parts['progress'] = _format_progress(current_step+1, total_steps)
+        parts['epochs'] = _format_count_of(epoch+1, total_epochs)
+        parts['steps'] = _format_count_of(step+1, steps_per_epoch)
+        parts['eta'] = _format_eta(start_time, current_step, total_steps)
+        parts['msg'] = msg
+        return parts
 
-        text += '[Epoch: {}] [Step: {}] {}'.format(epoch_count, step_count,(msg or self.message))
+    @staticmethod
+    def _format(parts):
 
-        self.display(text)
+        width, _ = Terminal.terminal_size()
+
+        def _check_line(line, eta_part=''):
+
+            # subtract 2 characters for the space used up by the spinner
+            add_space = 2
+
+            if eta_part:
+                # subtract 1 additional char for the separator to eta
+                add_space += 1
+
+            return len(line) + len(eta_part) + 1 + 2 <= width
+
+        formats = (
+            ('{progress} [Epoch: {epochs}] [Step: {steps}] {msg}', '{eta}'),
+            ('{progress} [Ep: {epochs}] [St: {steps}] {msg}', '{eta}'),
+            ('{progress} [Epoch: {epochs}] [Step: {steps}] {msg}', ''),
+            ('{progress} [Ep: {epochs}] [St: {steps}] {msg}', ''),
+            ('{progress} [Epoch: {epochs}] {msg}', ''),
+            ('{progress} [Ep: {epochs}] {msg}', ''),
+            ('{progress} {msg}', ''),
+        )
+
+        for fmt1, fmt2 in formats:
+            line1, line2 = fmt1.format(**parts), fmt2.format(**parts)
+
+            # subtract 2 characters for the space used up by the spinner
+            add_space = 2
+
+            if line2:
+                # subtract 1 additional char for the separator to eta
+                add_space += 1
+
+            if len(line1) + len(line2) + add_space <= width:
+                return line1 + ' ' + line2, line1
+
+        # when no matching format is found, cut the end of the text
+        text = '{progress} {msg}'.format(**parts)
+        text = text[:width-3-2] + '...'
+
+        return text, text
+
+
+    def update_epoch_step(self, epoch, total_epochs, step, steps_per_epoch, msg=None): # pylint: disable=R0913
+        """Update epoch and steps.
+        """
+        self._track_prev_epoch(epoch)
+
+        if not self.start_time:
+            self.start_time = datetime.datetime.now()
+
+        msg = msg or self.message
+
+        parts = TrainingSpinner._get_parts(epoch, total_epochs, step,
+                                           steps_per_epoch, msg, self.start_time)
+
+        text, self.prev_line = TrainingSpinner._format(parts)
+
+        self.display(text, 'stdout')
+
+    def stop(self, reason='done'):
+        if reason == 'done':
+            self._track_prev_epoch(None)
+
+        super().stop(reason)
+
+
 
 
 _DEFAULT_HEIGHT = 24
@@ -653,40 +771,9 @@ Terminal.try_enable_ansi()
 
 Terminal.show_cursor()
 
-if __name__ == '__main__':
-
-
-    with ProgressSpinner("Downloading MNIST") as spin:
-        time.sleep(1)
-        spin.update(0, 100)
-
-        for idx in range(99):
-            time.sleep(0.05)
-            spin.update(1, 100)
-
-
-    with Spinner("Preparing samples"):
-        time.sleep(5)
-        print("Using cache.")
-        time.sleep(5)
-
-    with TrainingSpinner("Training") as spin:
-        total_epochs = 10
-        steps_per_epoch = 100
-        time.sleep(1)
-        print("Loading Model...")
-        time.sleep(1)
-        for epoch in range(total_epochs):
-            for step in range(steps_per_epoch):
-                import random
-                spin.update_epoch_step(epoch, total_epochs, step, steps_per_epoch, "Acc: " + random.choice(["0.9743", "0.9625", "0.9744", "0.9801"]) + ", Loss: " + random.choice(["0.1239", "0.2456", "0.2678", "0.1996"]) + ", Val Acc: 0.1234, Val Loss: 0.9001 | ☕  " + str(total_epochs - epoch) + "min")
-                time.sleep(0.05)
-            print("Saving Checkpoint...")
-            time.sleep(2)
-
-
-    with Spinner("Training") as spin:
-        spin.display("A very long line is needed here !")
+def doit():
+    with Spinner("Preparing Samples") as spin:
+        # spin.display("A very long line is needed here !")
         time.sleep(2)
         # print("This is a message i am writing to stderr", file=sys.stderr)
         time.sleep(2)
@@ -700,7 +787,43 @@ if __name__ == '__main__':
             print("This is also working!")
             time.sleep(1)
 
+    with TrainingSpinner("Training") as spin:
+        total_epochs = 10
+        steps_per_epoch = 100
+        time.sleep(1)
+        print("Loading Model...")
+        time.sleep(1)
+        for epoch in range(total_epochs):
+            for step in range(steps_per_epoch):
+                import random
+                spin.update_epoch_step(epoch, total_epochs, step, steps_per_epoch, "Acc: " + random.choice(["0.9743", "0.9625", "0.9744", "0.9801"]) + ", Loss: " + random.choice(["0.1239", "0.2456", "0.2678", "0.1996"]) + ", Val Acc: 0.1234, Val Loss: 0.9001")
+                time.sleep(0.02)
+            print("Saving Checkpoint...")
+            time.sleep(0.05)
 
-    with Spinner("Loading TensorFlow"):
-        time.sleep(2)
-        raise ValueError("TensorFlow exploded!")
+
+
+
+
+    # with Spinner("Loading TensorFlow"):
+    #     time.sleep(2)
+    #     raise ValueError("TensorFlow exploded!")
+
+if __name__ == '__main__':
+    doit()
+
+    # with ProgressSpinner("Downloading MNIST") as spin:
+    #     time.sleep(1)
+    #     spin.update(0, 100)
+
+    #     for idx in range(99):
+    #         time.sleep(0.05)
+    #         spin.update(1, 100)
+
+
+    # with Spinner("Preparing samples"):
+    #     time.sleep(5)
+    #     print("Using cache.")
+    #     time.sleep(5)
+
+
