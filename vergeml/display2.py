@@ -30,7 +30,6 @@ def _text_ljust(text, prev_len):
 
     return text
 
-# TODO don't spin when output is not interactive (i.e. not a tty).
 # TODO don't spin faster
 
 class _SpinnerThread(threading.Thread):
