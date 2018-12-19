@@ -6,7 +6,7 @@ The configuration file will be the starting point when you create a new project.
 
 You can adjust every command and subcommand including model specific functions. 
 
-> Info: In addition, it is a good way to share your configuration with others, so they have a good method to exactly reproduce your work. (Spoiler alert! Here is our best performing [config file](/Installation/Installation.md) for the skin cancer detector)
+> Info: In addition, it is a good way to share your configuration with others, so they have a good method to exactly reproduce your work.
 
 VergeML general settings
 ------------
@@ -14,7 +14,7 @@ These are the top level settings, which are always available:
 
 * model: contains all model relevant defaults
 * data: all data relevant functions, parameters and preprocessing steps.
-* samples-dir: path where your data samples are stored.
+* samples-dir: path where your data instances are stored.
 * trainings-dir: path where your trainings are stored.
 * cache-dir: path where your caching file is stored.
 * device: computational resources allocation for training and inference.
@@ -44,7 +44,7 @@ How to use the config file
 
 So lets mingle with your config file! Down below we will show you examples on how to use it. Lets start with VergeML general settings:
 
-VergeML general settings
+## VergeML general settings ##
 ------------
 
 model:
@@ -120,7 +120,7 @@ Your data is automatically cached before starting your first training. This ensu
 
 > Info: The default chaching is via creating a chache file and stored in your .cache directory. 
 
-You can opt to change how VergeML caches your samples. To read more on how to do this, see the more advances section on [Caching](/Data/Caching). 
+You can opt to change how VergeML caches your samples. To read more on how to do this, see the more advances section on [Caching](/References/Cache). 
 
 device:
 ------------
@@ -183,6 +183,52 @@ random-seed: 1234
 ~~~
 
 > Info: Although this is true for all processes concerning data, the training process of a model can not be defined by the random seed. Even if you feed the model with the exact same data, the model still can show slightly different results. 
+
+## Command specific settings ##
+------------
+
+List
+------------
+You can compare training runs by typing:
+
+    ml list
+
+This will give you randmobly chosen parameters from your underlying model. To configure your view in VergeML, add the desired paramters from your model as a list:
+
+~~~python
+list:
+  - learning-rate
+  - epochs
+  - test_acc
+#List relevant model parameters for comparison.
+~~~
+
+Run
+------------
+
+The ```run:``` in VergeML executes third party application, such as ```tensorboard``` or a ```rest service```. To change how these programs are launched just add specific parameters, such as: 
+
+~~~python
+run:
+  rest:
+    - local-host: 2204
+#List relevant model parameters for comparison.
+~~~
+
+## Model specific settings ##
+------------
+
+Your selected model comes with specific functions, such as train or predict. You can adapt standard settings for these functions based on the model´s parameters.
+
+For example, a model might allow you to change on which training hyperparameters to train: 
+
+~~~python
+train:
+  architecure: resnet-50
+  learning-rate: 0.0002
+  dropout: 0.5
+#You can specify standard training parameters for every training run like this. 
+~~~
 
 Next read
 ============

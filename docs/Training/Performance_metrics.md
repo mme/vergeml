@@ -1,17 +1,24 @@
 How to read performance metrics
 ============
 
-During training the models will generate values that indicate performance. A very common performance metric is accuracy (sometimes split into training, validation and test accuracy). Accuracy measures how well your AI does at a given task. So, the higher, the better (within a range of 0 - 1).
+During training your model will generate values that indicate its performance. A very common performance metric is accuracy (sometimes split into training, validation and test accuracy). Accuracy measures how well your AI does at a given task. So, the higher, the better (within a range of 0 - 1).
 
 Another metric often used is the loss value. This one is more dificult to read, as it states the distance between prediction and truth. Or in other simple words, how far the AI is on being perfect. Here, you want to achieve a downward trend torwards minimazing the loss value.
 
 How does VergeML handle performance metrics?
 ============
 
-During training your model will generate model specific performance metrics. To keep it simple, lets assume it just creates accuracy and loss values. For every sample the model learn, it will generate training values for accuracy and loss.
+During training your model will generate model specific performance metrics. To keep it simple, lets assume it just creates accuracy and loss values. For every sample the model learns, it will generate training values for accuracy and loss.
 
-After each epoch ()
+After a training has finished, you can plot different charts to your trained AI by: 
 
+    ml @ai-name plot:chart-name
+
+We have included several plot functions within VergeML, such as:
+
+* Reciever Operating Characteristics Curve (ROC): ```plot:roc```
+* Confusion Matrix: ```plot:confusion-matrix```
+* Precision-Recall: ```plot:confusion-matrix --class=label1```
 
 ### What is overfitting? ###
 
@@ -34,6 +41,7 @@ VergeML automatically saves performance metrics in the ```trainings/stats``` dir
 
 * events file: this is a file generated from ```tensorflow``` which saves during each training steps performance metrics. You can read this file using ```tensorboard```. 
 * stats.csv file: this saves the stats in a .csv file.
+* predictions.csv file: this saves all prediction values for your test sample split.
 
 Next read
 ============

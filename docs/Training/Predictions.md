@@ -3,17 +3,14 @@ Its time to put the AI into use!
 
 Predictions, or inference, is the term used when an AI uses its capabilities learned during deep learning training. So in order to infere, an AI must have been trained before. 
 
-To start predicting a singular file we need to adress the trained AI using its name by typing: 
+To start predicting we need to adress the trained AI using its name by typing: 
 
-    ml @<AI-name> predict <file>
+    ml @ai-name predict /file.format
 
 To predict multiple files just direct to the directory and type
 
-    ml @<AI-name> predict <path/*>
-
-You could include the following options 
-* --top=n 
-
+    ml @ai-name predict path/*.format
+    
 
 Next read
 ============
