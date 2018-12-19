@@ -1,9 +1,9 @@
 Training overview
 ============
 
-Most ML models require training in order to handle a specific task. During training, the model will adjust its neurons (or weights) based on the training dataset. After each training loop (or epoch) the weights are updated by a learning rate (this process is called back propagation).
+Most ML models require training in order to handle a specific task. During training, the model will adjust its neurons (or weights) based on the training dataset. After each training loop (or epoch) the weights are updated by a learning rate and an optimization function.
 
-In this tutorial, you will learn the most relevant features for training your model in VergeML and let´s see if we can improve the performance of our skin cancer detector!
+In this tutorial, you will learn the most relevant features for training your model in VergeML.
 
 Starting training
 -----------
@@ -14,14 +14,14 @@ Training is started by typing:
 
 This will start the training process with all default parameters of your chosen model. 
 
-Optimizing the standard training parameters
+Optimizing the standard training hyperparameters
 -----------
 
-The general performance on your training depends on the model itself, the hyperparameters and on the underlying training dataset. Hyperparameters are like imaginary knobs that you can turn and adjust, so your models gets better at understanding the specific task. 
+The general performance on your training depends on the model itself, its set of hyperparameters and on the underlying training dataset. Hyperparameters are like imaginary knobs that you can turn and adjust, so your models gets better at understanding the specific task. 
 
 You can simply specify hyperparameters in a single training run by including them in your terminal command:
 
-    ml train --learning_rate=0.005 --epochs=5
+    ml train --learning_rate=0.005 --epochs=50
 
 > Info: Type ml help glossary to see definitions of the most common hyperparameters used for your model.
 
@@ -33,28 +33,24 @@ To do this, open your project file (vergeml.yaml) and, for example, set a new de
 model: imagenet
 
 train:
-  cnn: resnet50
+  architecture: resnet-50
   learning-rate: 0.002
   dropout: 0.5
   ~~~
 
-> Info: Type ```ml help train``` to see what hyperparameters you can change and what they do.
+> Info: Type ```ml help train``` to see what hyperparameters you can change for your model and what they do.
 
 Training progression
 -----------
 
 The command ```ml train``` will trigger the following steps: 
 
-1. Creating a cache file in the .cache directory and fingerprints the input data (VergeML will skip this step, if your data and preprocessing pipeline did not change in between training runs).
-2. Loading of the model's architecture
-3. Start training by loading input batches into the model
-4. Writing training results and saving the model´s checkpoints into the training directory
+1. Creating a cache file in the .cache directory and fingerprints the input data (VergeML will skip this step, if your data and preprocessing pipeline did not change in between training runs). This step speeds up training a lot! 
+2. Loading of the model's architecture.
+3. Start training by loading input batches into the model.
+4. Writing training results and saving the model´s checkpoints into the training directory.
 
-Your training will finish, when the last epoch is completed. What was your test accuracy?
-
-Ours improved from the first 94% to 96%. 
-
-Screenshot! 
+Your training will finish, when the last epoch is completed.
 
 Compare training runs
 -----------
