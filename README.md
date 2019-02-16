@@ -104,4 +104,4 @@ License
 ============
 [MIT](/LICENSE)
 
-Copyright (c) 2018-present, Markus Ecker
+Copyright (c) 2018-2019 Markus Ecker
